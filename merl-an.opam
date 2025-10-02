@@ -2,15 +2,15 @@
 opam-version: "2.0"
 synopsis: "Tool for merlin performance analysis"
 description:
-  "Merl-an generates queries to test merlin performance, executes them and gathers the results."
+  "Merl-an generates queries to analyze merlin performance and behavior, executes them and gathers the results."
 maintainer: ["Sonja Heinze"]
 authors: ["Sonja Heinze" "Rafał Gwoździński"]
 license: "MIT"
 homepage: "https://github.com/pitag-ha/merl-an"
 bug-reports: "https://github.com/pitag-ha/merl-an/issues"
 depends: [
-  "ocaml"
-  "dune" {>= "3.2"}
+  "dune" {>= "3.17"}
+  "ocaml" {>= "5.3.0"}
   "ppxlib"
   "yojson"
   "fpath"
@@ -19,8 +19,14 @@ depends: [
   "ppx_deriving_yojson"
   "ppx_enumerate"
   "ppx_fields_conv"
-  "ppx_yojson_conv" {<= "v0.15.1"}
+  "ppx_yojson_conv"
   "ptime"
+  "merlin-lib"
+  "dot-merlin-reader"
+  "merlin" {with-test}
+  "cb-check" {with-test}
+  "ocaml-lsp-server" {with-dev-setup}
+  "ocamlformat" {with-dev-setup}
   "odoc" {with-doc}
 ]
 build: [

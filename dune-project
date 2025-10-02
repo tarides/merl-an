@@ -1,4 +1,4 @@
-(lang dune 3.2)
+(lang dune 3.17)
 
 (name merl-an)
 
@@ -17,10 +17,9 @@
 (package
  (name merl-an)
  (synopsis "Tool for merlin performance analysis")
- (description "Merl-an generates queries to test merlin performance, executes them and gathers the results.")
+ (description "Merl-an generates queries to analyze merlin performance and behavior, executes them and gathers the results.")
  (depends
-  ocaml
-  dune
+  (ocaml (>= 5.3.0))
   ppxlib
   yojson
   fpath
@@ -29,5 +28,11 @@
   ppx_deriving_yojson
   ppx_enumerate
   ppx_fields_conv
-  (ppx_yojson_conv (<= v0.15.1))
-  ptime))
+  ppx_yojson_conv
+  ptime
+  merlin-lib
+  dot-merlin-reader
+  (merlin :with-test)
+  (cb-check :with-test)
+  (ocaml-lsp-server :with-dev-setup)
+  (ocamlformat :with-dev-setup)))

@@ -83,18 +83,17 @@ module Response : sig
   (** Extracts the information about time consumption from an [ocamlmerlin]
       response *)
 
-  val crop_timing : t -> t
-  (** Removes the timing field from the merlin responce. Usefule when you want
-      pure data, e.g. for regression testing. *)
-
-  val crop_value : t -> t
-  (** Removes the value field from the merlin response, i.e. the actual response
-      to the query. *)
+  val crop_arbitrary_keys : string list -> t -> t
+  (** [crop_arbitrary_keys keys x] Removes the various [keys] passed from the
+      result. *)
 
   val strip_file : t -> t
   (** In a Merlin response of the form [{"value":{"file":file_dir, ...}, ...}],
       where [file_dir] is a qualified file name, this strips off the directory
       from [file_dir], keeping only its file base name.*)
+
+  val strip_location : t -> t
+  (** Strip the location in a Merlin response of class [Exception]. *)
 
   val get_return_class : t -> (return_class, Logs.t) result
   val get_query_num : t -> (int, Logs.t) result
@@ -123,7 +122,8 @@ module Cmd : sig
 
   val run : repeats:int -> t -> (Response.t list, Logs.t) Result.t
   (** [run ~repeats cmd] runs the concrete [ocamlmerlin] command [cmd]. It runs
-      that command [repeat] times in a row and returns the [repeats] responses *)
+      that command [repeat] times in a row and returns the [repeats] responses
+  *)
 end
 with type merlin := t
 

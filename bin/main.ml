@@ -51,7 +51,7 @@ let performance =
   Cmd.v info performance_term
 
 let behavior =
-  let f (`No_full no_full) (`No_distilled_data no_distilled_data) =
+  let f (`No_full no_full) (`No_distilled_data no_distilled_data) _cache =
     let config =
       {
         Merl_an.Backend.full = not no_full;
@@ -65,8 +65,8 @@ let behavior =
   let pre_term = Term.(const f $ Args.no_full $ Args.no_distilled_data) in
   let behavior_term =
     Term.(
-      pre_term $ Args.merlin $ Args.proj_dirs $ Args.dir_name $ Args.sample_size
-      $ Args.query_types $ Args.extensions)
+      pre_term $ Args.cache_workflow $ Args.merlin $ Args.proj_dirs
+      $ Args.dir_name $ Args.sample_size $ Args.query_types $ Args.extensions)
   in
   let info =
     let doc =

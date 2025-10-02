@@ -49,3 +49,5 @@ module Yojson = struct
     let yojson_of_t = Fun.id
   end
 end
+
+include Ppx_yojson_conv_lib.Yojson_conv.Primitives

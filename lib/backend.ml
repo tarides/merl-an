@@ -116,13 +116,14 @@ end
 
 module Benchmark_metric = struct
   type t = { name : string; mutable value : int list; units : string }
-  [@@deriving yojson_of]
+  [@@deriving yojson_of] [@@warning "-unused-field"]
 end
 
 module StringMap = Map.Make (String)
 
 module Benchmark_result = struct
   type t = { name : string; mutable metrics : Benchmark_metric.t StringMap.t }
+  [@@warning "-unused-field"]
 
   let update (result : t) (metric : Benchmark_metric.t) =
     let f x =
@@ -274,7 +275,13 @@ module Performance = struct
     in
     let resp =
       (* TODO: make a cli-argument out of this instead of doing this always *)
-      let responses = List.map Merlin.Response.crop_value responses in
+      let responses =
+        List.map
+          (fun resp ->
+            Merlin.Response.(
+              crop_arbitrary_keys [ "value" ] @@ strip_location @@ resp))
+          responses
+      in
       { Query_response.sample_id = id; cmd; responses }
     in
     let cmd = { Command.sample_id = id; cmd } in
@@ -381,7 +388,11 @@ let behavior config =
                  let responses =
                    List.map
                      (fun resp ->
-                       Merlin.Response.(strip_file @@ crop_timing @@ resp))
+                       Merlin.Response.(
+                         strip_file
+                         @@ crop_arbitrary_keys
+                              [ "timing"; "cache"; "heap_mbytes" ]
+                         @@ strip_location @@ resp))
                      responses
                  in
                  { Query_response.sample_id = id; cmd; responses }
@@ -508,7 +519,13 @@ module Benchmark = struct
     in
     let resp =
       (* TODO: make a cli-argument out of this instead of doing this always *)
-      let responses = List.map Merlin.Response.crop_value responses in
+      let responses =
+        List.map
+          Merlin.Response.(
+            fun resp ->
+              crop_arbitrary_keys [ "value" ] @@ strip_location @@ resp)
+          responses
+      in
       { Query_response.sample_id = id; cmd; responses }
     in
     let cmd = { Command.sample_id = id; cmd } in

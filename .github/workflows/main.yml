@@ -17,7 +17,7 @@ jobs:
           - ubuntu-latest
           - macos-latest
         ocaml-compiler:
-          - 4.14.x
+          - 5.3.x
 
     runs-on: ${{ matrix.os }}
 
@@ -28,24 +28,16 @@ jobs:
           submodules: true
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: ${{ matrix.os == 'ubuntu-latest' }}
 
       - name: Install opam packages
-        run: opam install --deps-only .
+        run: opam install --deps-only  --with-test .
 
       - name: Run build
         run: opam exec -- dune build
-
-      - name: Install merlin
-        run: |
-          opam pin merlin-lib git+https://github.com/pitag-ha/merlin#add-query-num-414
-          opam pin merlin git+https://github.com/pitag-ha/merlin#add-query-num-414
-
-      - name: Install cb-check
-        run: opam pin -y cb-check https://github.com/ocurrent/current-bench.git
 
       - name: Run tests
         run: opam exec -- dune test
@@ -54,7 +46,7 @@ jobs:
     strategy:
       matrix:
         ocaml-compiler:
-          - 4.14.x
+          - 5.3.x
 
     runs-on: ubuntu-latest
 
@@ -63,7 +55,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: true

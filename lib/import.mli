@@ -35,3 +35,5 @@ module Yojson : sig
     val yojson_of_t : t -> t
   end
 end
+
+include module type of Ppx_yojson_conv_lib.Yojson_conv.Primitives

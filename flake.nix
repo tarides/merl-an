@@ -9,7 +9,7 @@
   # We're using custom merlin from Sonja's branch.
   # It's an old fork without flake.nix, thus we build it the hard way.
   inputs.merlin-repository = {
-    url = "github:pitag-ha/merlin/add-query-num-414";
+    url = "github:ocaml/merlin/main";
     flake = false;
   };
 
@@ -113,7 +113,7 @@
           devShells.default = pkgs.mkShell {
             inputsFrom = pkgs.lib.attrValues packages;
             buildInputs = with pkgs.ocamlPackages; [
-              pkgs.ocamlformat_0_24_1
+              pkgs.ocamlformat_0_27_0
               cb-check
               ocaml-lsp
               pkgs.jq

@@ -1,6 +1,6 @@
 (library
  (name merl_an)
  (public_name merl-an)
- (libraries ppxlib yojson unix fpath bos ptime)
+ (libraries ppxlib str unix fpath bos ptime)
  (preprocess
   (pps ppx_yojson_conv ppx_enumerate ppx_fields_conv)))

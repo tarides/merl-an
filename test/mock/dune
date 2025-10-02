@@ -1,0 +1,3 @@
+(executable
+ (name merlin_mock)
+ (public_name merlin_mock))

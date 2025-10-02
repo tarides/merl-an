@@ -5,4 +5,4 @@
  (locks merlin_tests))
 
 (cram
- (deps %{bin:merl-an}))
+ (deps %{bin:merl-an} %{bin:merlin_mock}))
