@@ -390,9 +390,10 @@ let behavior config =
                      (fun resp ->
                        Merlin.Response.(
                          strip_file
-                         @@ crop_arbitrary_keys
-                              [ "timing"; "cache"; "heap_mbytes" ]
-                         @@ strip_location @@ resp))
+                         (* @@ crop_arbitrary_keys
+                              [ "timing"; "cache"; "heap_mbytes" ] *)
+                         @@ strip_location
+                         @@ resp))
                      responses
                  in
                  { Query_response.sample_id = id; cmd; responses }
