@@ -537,7 +537,7 @@ module Benchmark = struct
       }
     in
     (* TODO: Pass it instead of hardcoding *)
-    let cache_workflow = Merlin.Cache_workflow.Buffer_typed in
+    let cache_workflow = Merlin.Cache_workflow.Full_cache in
     let upd = function
       | Some x -> Some (Benchmark_result.update x metric)
       | None ->

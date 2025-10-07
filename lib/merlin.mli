@@ -4,9 +4,9 @@ module Cache_workflow : sig
   (** Kind of [ocamlmerlin] cache population to be simulated when running
       [ocamlmerlin]. *)
   type t =
-    | Buffer_typed
+    | Full_cache
     (* | File_hash_diff *)
-    (* | Cmis_cached *)
+    | Cmis_cached
     | No_cache
 
   val yojson_of_t : t -> Yojson.Safe.t

@@ -2,36 +2,41 @@ open! Import
 
 module Cache_workflow = struct
   type t =
-    | Buffer_typed
+    | Full_cache
     (* | File_hash_diff  *)
-    (* | Cmis_cached  *)
+    | Cmis_cached
     | No_cache
   [@@deriving yojson_of, enumerate]
 
   let to_string = function
-    | Buffer_typed -> "buffer-typed"
+    | Full_cache -> "full-cache"
     (* | File_hash_diff -> "file-hash-diff"  *)
-    (* | Cmis_cached -> "cmis-cached" *)
+    | Cmis_cached -> "cmis-cached"
     | No_cache -> "no-cache"
 
   let description = function
-    | Buffer_typed -> "Buffer is typed"
+    | Full_cache -> "Full cache: buffer is typed; cmis are cached"
     (* | File_hash_diff -> "Buffer is typed; file contents changed but AST did not" *)
-    (* | Cmis_cached -> "Buffer is not typed; cmis are cached" *)
+    | Cmis_cached -> "Buffer is not typed; cmis are cached"
     | No_cache -> "Buffer is not typed; cmis are not cached"
 
   let uses_server cache =
     match cache with
-    (* | Cmis_cached  *)
     (* | File_hash_diff  *)
-    | Buffer_typed -> true
+    | Full_cache | Cmis_cached -> true
     | No_cache -> false
 
   let print path = function
     (* | Cmis_cached  *)
     (* | File_hash_diff *)
-    | Buffer_typed -> Format.sprintf "%s server" (Fpath.to_string path)
+    | Full_cache | Cmis_cached ->
+        Format.sprintf "%s server" (Fpath.to_string path)
     | No_cache -> Format.sprintf "%s single" (Fpath.to_string path)
+
+  let disable_typing_cache = function
+    | Full_cache | No_cache -> false
+    (* | File_hash_diff  *)
+    | Cmis_cached -> true
 end
 
 module Path = struct
@@ -262,36 +267,42 @@ module Cmd = struct
     in
     let open Result.Syntax in
     let* query_cmd =
+      let typing_cache =
+        if Cache_workflow.disable_typing_cache merlin.cache_workflow then
+          "-use-typer-cache=no"
+        else ""
+      in
       match query_type with
       | Query_type.Locate ->
           let+ loc = retrieve_loc ~query_type loc in
-          Format.asprintf " %a %s -look-for ml -position '%a' -filename %a < %a"
-            basic_cmd merlin
+          Format.asprintf
+            " %a %s -look-for ml -position '%a' %s -filename %a < %a" basic_cmd
+            merlin
             (Query_type.to_string query_type)
             (Location.print_edge Right)
-            loc File.pp file File.pp file
+            loc typing_cache File.pp file File.pp file
       | Case_analysis ->
           let+ loc = retrieve_loc ~query_type loc in
-          Format.asprintf "%a %s -start '%a' -end '%a' -filename %a < %a"
+          Format.asprintf "%a %s -start '%a' -end '%a' %s -filename %a < %a"
             basic_cmd merlin
             (Query_type.to_string query_type)
             (Location.print_edge Left) loc
             (Location.print_edge Right)
-            loc File.pp file File.pp file
+            loc typing_cache File.pp file File.pp file
       | Type_enclosing ->
           let+ loc = retrieve_loc ~query_type loc in
-          Format.asprintf "%a %s -position '%a' -index 0 -filename %a < %a"
+          Format.asprintf "%a %s -position '%a' -index 0 %s -filename %a < %a"
             basic_cmd merlin
             (Query_type.to_string query_type)
             (Location.print_edge Right)
-            loc File.pp file File.pp file
+            loc typing_cache File.pp file File.pp file
       | Occurrences ->
           let+ loc = retrieve_loc ~query_type loc in
-          Format.asprintf "%a %s -identifier-at '%a' -filename %a < %a"
+          Format.asprintf "%a %s -identifier-at '%a' %s -filename %a < %a"
             basic_cmd merlin
             (Query_type.to_string query_type)
             (Location.print_edge Right)
-            loc File.pp file File.pp file
+            loc typing_cache File.pp file File.pp file
       | Complete_prefix | Expand_prefix -> (
           (* TODO: for expand-prefix, it might be interesting to modify the source code to introduce an error *)
           match li with
@@ -299,12 +310,12 @@ module Cmd = struct
               let+ loc = retrieve_loc ~query_type loc in
               let first_half s = String.(sub s 0 ((length s / 2) + 1)) in
               Format.asprintf
-                "%a %s -prefix '%s' -position '%a' -filename %a < %a" basic_cmd
-                merlin
+                "%a %s -prefix '%s' -position '%a' %s -filename %a < %a"
+                basic_cmd merlin
                 (Query_type.to_string query_type)
                 (first_half @@ Longident.name li)
                 (Location.print_edge Right)
-                loc File.pp file File.pp file
+                loc typing_cache File.pp file File.pp file
           | None ->
               Error
                 (Logs.Error
@@ -314,9 +325,9 @@ module Cmd = struct
                       (Query_type.to_string query_type))))
       | Errors ->
           Result.ok
-          @@ Format.asprintf "%a %s -filename %a < %a" basic_cmd merlin
+          @@ Format.asprintf "%a %s %s -filename %a < %a" basic_cmd merlin
                (Query_type.to_string query_type)
-               File.pp file File.pp file
+               typing_cache File.pp file File.pp file
     in
     let cmd =
       match merlin.cache_workflow with
@@ -328,7 +339,7 @@ module Cmd = struct
       (* Format.asprintf "echo -e 'let () = ()\n$(cat %a)' > %a " File.pp file File.pp file *)
 
       (* query_cmd FIXME!!! *)
-      | Buffer_typed | No_cache -> query_cmd
+      | Full_cache | No_cache | Cmis_cached -> query_cmd
     in
     Result.ok cmd
 
