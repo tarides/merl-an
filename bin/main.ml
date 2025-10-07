@@ -51,7 +51,8 @@ let performance =
   Cmd.v info performance_term
 
 let behavior =
-  let f (`No_full no_full) (`No_distilled_data no_distilled_data) _cache =
+  let f (`No_full no_full) (`No_distilled_data no_distilled_data) (`Cache cache)
+      =
     let config =
       {
         Merl_an.Backend.full = not no_full;
@@ -59,8 +60,7 @@ let behavior =
       }
     in
     let backend = Merl_an.Backend.behavior config in
-    analyze ~backend (`Filter_outliers false)
-      (`Cache Merl_an.Merlin.Cache_workflow.Buffer_typed) (`Repeats 1)
+    analyze ~backend (`Filter_outliers false) (`Cache cache) (`Repeats 1)
   in
   let pre_term = Term.(const f $ Args.no_full $ Args.no_distilled_data) in
   let behavior_term =
@@ -89,7 +89,7 @@ let benchmark =
     Term.(
       const (analyze ~backend)
       $ Args.filter_outliers
-      $ const (`Cache Merl_an.Merlin.Cache_workflow.Buffer_typed)
+      $ const (`Cache Merl_an.Merlin.Cache_workflow.Full_cache)
       $ Args.repeats_per_sample $ Args.merlin $ Args.proj_dirs $ Args.dir_name
       $ Args.sample_size $ Args.query_types $ Args.extensions)
   in

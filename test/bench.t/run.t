@@ -4,7 +4,7 @@
   {
     "results": [
       {
-        "name": "buffer-typed",
+        "name": "full-cache",
         "metrics": [
           {
             "name": "case-analysis",

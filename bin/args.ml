@@ -31,12 +31,12 @@ let dir_name =
 let cache_workflow =
   let doc =
     "This tool supports different workflows simulating different states of the \
-     [ocamlmerlin] cache. The option [bufer-typed] simulates the situation of \
-     using Merlin on a fully typed buffer: the cache of the current typing as \
-     well as the cmi-cache are warm; the cmt-cache is unpredictable. The \
-     option [no-cache] simulates the situation of opening a new project and \
-     running a merlin query for the very first time: it uses the single \
-     frontend."
+     [ocamlmerlin] cache. Wich the option [full-cache], both the cache of the \
+     current typing as well as the cmi-cache are warm; the cmt-cache is \
+     unpredictable. The option [no-cache] simulates the situation of opening a \
+     new project and running a merlin query for the very first time: it uses \
+     the single frontend. The option [cmi-cached] is in between: the cmi-cache \
+     is warm, the cache of the current typing disabled."
     (*TODO: Add: The option [hot] simulates the situation of having a \
       fully initialized cache: it uses the merlin server frontend and \
       initializes the cache 100%.*)
@@ -51,7 +51,7 @@ let cache_workflow =
     (fun x -> `Cache x)
     Arg.(
       value
-      & opt e Merl_an.Merlin.Cache_workflow.Buffer_typed
+      & opt e Merl_an.Merlin.Cache_workflow.Full_cache
       & info [ "cache" ] ~doc)
 
 let sample_size =
