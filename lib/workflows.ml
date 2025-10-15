@@ -36,12 +36,15 @@ let analyze ~backend:(module Backend : Backend.Data_tables) ~repeats
       let () =
         let d =
           let* cmd = Merlin.Cmd.make ~query_type ~file merlin in
+          let now = Unix.gettimeofday () in
           let* responses = Merlin.Cmd.run ~repeats cmd in
-          Ok (cmd, responses)
+          let unix_time = (Unix.gettimeofday () -. now) *. 1000. in
+          Unix.sleepf 0.1;
+          Ok (cmd, responses, unix_time)
         in
         match d with
         | Error log -> D.persist_logs ~log data
-        | Ok (cmd, responses) ->
+        | Ok (cmd, responses, unix_time) ->
             update
               {
                 Data.id = id_counter;
@@ -50,6 +53,7 @@ let analyze ~backend:(module Backend : Backend.Data_tables) ~repeats
                 file;
                 loc = Location.none;
                 query_type;
+                unix_time;
               }
       in
       id_counter + 1
