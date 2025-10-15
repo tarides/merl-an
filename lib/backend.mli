@@ -23,6 +23,7 @@ module type Data_tables = sig
     file:File.t ->
     loc:Location.t ->
     query_type:Merlin.Query_type.t ->
+      unix_time:float ->
     t ->
     unit
   (** Append analyzis data. *)
