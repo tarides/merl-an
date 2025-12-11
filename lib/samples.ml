@@ -92,10 +92,7 @@ let analyze ~init_cache ~merlin ~repeats ~update ~filter_outliers
       | [] -> Ok ()
       | { id; sample = loc, li } :: rest ->
           let* cmd = Merlin.Cmd.make ~query_type ~file ?li ~loc merlin in
-          let now = Unix.gettimeofday () in
           let* responses = Merlin.Cmd.run ~repeats cmd in
-          let unix_time = (Unix.gettimeofday () -. now) *. 1000. in
-          Unix.sleepf 0.1;
           let fltr_outliers responses =
             let open Merlin.Response in
             (* If init_cache is false, then we don't want to filter the first response as it
@@ -121,7 +118,7 @@ let analyze ~init_cache ~merlin ~repeats ~update ~filter_outliers
           let responses =
             if filter_outliers then fltr_outliers responses else responses
           in
-          update { Data.id; responses; cmd; file; loc; query_type; unix_time };
+          update { Data.id; responses; cmd; file; loc; query_type };
           loop rest
     in
     loop samples

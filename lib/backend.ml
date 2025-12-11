@@ -16,7 +16,6 @@ module type Data_tables = sig
     file:File.t ->
     loc:Location.t ->
     query_type:Merlin.Query_type.t ->
-    unix_time:float ->
     t ->
     unit
 
@@ -100,7 +99,6 @@ module Query_response = struct
     sample_id : int;
     cmd : Merlin.Cmd.t;
     responses : Merlin.Response.t list;
-    unix_time : float;
   }
   [@@deriving yojson_of]
 
@@ -258,8 +256,7 @@ module Performance = struct
     in
     ()
 
-  let update_analysis_data ~id ~responses ~cmd ~file ~loc ~query_type ~unix_time
-      tables =
+  let update_analysis_data ~id ~responses ~cmd ~file ~loc ~query_type tables =
     let max_timing, timings, responses =
       (* FIXME: add json struture to the two lists *)
       let rec loop ~max_timing ~responses ~timings = function
@@ -285,7 +282,7 @@ module Performance = struct
               crop_arbitrary_keys [ "value" ] @@ strip_location @@ resp))
           responses
       in
-      { Query_response.sample_id = id; cmd; responses; unix_time }
+      { Query_response.sample_id = id; cmd; responses }
     in
     let cmd = { Command.sample_id = id; cmd } in
     tables.performances <- perf :: tables.performances;
@@ -379,7 +376,7 @@ let behavior config =
     let persist_logs ~log tables = tables.logs <- log :: tables.logs
 
     let update_analysis_data ~id ~responses ~cmd ~file:_ ~loc:_ ~query_type:_
-        ~unix_time tables =
+        tables =
       let command = { Command.sample_id = id; cmd } in
       tables.commands <- command :: tables.commands;
       let () =
@@ -398,7 +395,7 @@ let behavior config =
                          @@ strip_location @@ resp))
                      responses
                  in
-                 { Query_response.sample_id = id; cmd; responses; unix_time }
+                 { Query_response.sample_id = id; cmd; responses }
                in
                Some (resp :: fr))
       in
@@ -506,7 +503,7 @@ module Benchmark = struct
     ()
 
   let update_analysis_data ~id ~responses ~cmd ~file:_file
-      ~loc:(_loc : Import.location) ~query_type ~unix_time tables =
+      ~loc:(_loc : Import.location) ~query_type tables =
     let _max_timing, timings, responses =
       (* FIXME: add json struture to the two lists *)
       let rec loop ~max_timing ~responses ~timings = function
@@ -529,7 +526,7 @@ module Benchmark = struct
               crop_arbitrary_keys [ "value" ] @@ strip_location @@ resp)
           responses
       in
-      { Query_response.sample_id = id; cmd; responses; unix_time }
+      { Query_response.sample_id = id; cmd; responses }
     in
     let cmd = { Command.sample_id = id; cmd } in
     let metric =

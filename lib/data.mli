@@ -8,7 +8,6 @@ type sample = {
   file : File.t;
   loc : Location.t;
   query_type : Merlin.Query_type.t;
-  unix_time : float;
 }
 
 module Make (_ : Backend.Data_tables) : sig

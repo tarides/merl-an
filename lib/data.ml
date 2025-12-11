@@ -8,7 +8,6 @@ type sample = {
   file : File.t;
   loc : Location.t;
   query_type : Merlin.Query_type.t;
-  unix_time : float;
 }
 
 module Make (B : Backend.Data_tables) = struct
@@ -64,9 +63,8 @@ module Make (B : Backend.Data_tables) = struct
       exit 20)
     else { dump_dir; content = tables; merlin }
 
-  let update t { id; responses; cmd; file; loc; query_type; unix_time } =
-    B.update_analysis_data ~id ~responses ~cmd ~file ~loc ~query_type ~unix_time
-      t.content
+  let update t { id; responses; cmd; file; loc; query_type } =
+    B.update_analysis_data ~id ~responses ~cmd ~file ~loc ~query_type t.content
 
   let persist_logs ~log { content; _ } = B.persist_logs ~log content
 
