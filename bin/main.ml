@@ -13,13 +13,14 @@ let man =
 
 let analyze ~backend (`Filter_outliers filter_outliers) (`Cache cache_workflow)
     (`Repeats repeats) (`Merlin merlin_path) (`Proj_dirs proj_dirs)
-    (`Dir_name data_dir) (`Sample_size sample_size) (`Query_types query_types)
+    (`Dir_name data_dir) (`File_samples per_file_samples)
+    (`Total_samples total_samples) (`Query_types query_types)
     (`Extensions extensions) =
   Printexc.record_backtrace true;
   match
     Merl_an.Workflows.analyze ~backend ~repeats ~cache_workflow ~merlin_path
-      ~proj_dirs ~data_dir ~sample_size ~query_types ~filter_outliers
-      ~extensions
+      ~proj_dirs ~data_dir ~per_file_samples ~total_samples ~query_types
+      ~filter_outliers ~extensions
   with
   | Ok () -> ()
   | Error (`Msg err) ->
@@ -37,8 +38,8 @@ let performance_term =
   Term.(
     const (analyze ~backend)
     $ Args.filter_outliers $ Args.cache_workflow $ Args.repeats_per_sample
-    $ Args.merlin $ Args.proj_dirs $ Args.dir_name $ Args.sample_size
-    $ Args.query_types $ Args.extensions)
+    $ Args.merlin $ Args.proj_dirs $ Args.dir_name $ Args.per_file_samples
+    $ Args.total_samples $ Args.query_types $ Args.extensions)
 
 let performance =
   let info =
@@ -66,7 +67,8 @@ let behavior =
   let behavior_term =
     Term.(
       pre_term $ Args.cache_workflow $ Args.merlin $ Args.proj_dirs
-      $ Args.dir_name $ Args.sample_size $ Args.query_types $ Args.extensions)
+      $ Args.dir_name $ Args.per_file_samples $ Args.total_samples
+      $ Args.query_types $ Args.extensions)
   in
   let info =
     let doc =
@@ -91,7 +93,8 @@ let benchmark =
       $ Args.filter_outliers
       $ const (`Cache Merl_an.Merlin.Cache_workflow.Full_cache)
       $ Args.repeats_per_sample $ Args.merlin $ Args.proj_dirs $ Args.dir_name
-      $ Args.sample_size $ Args.query_types $ Args.extensions)
+      $ Args.per_file_samples $ Args.total_samples $ Args.query_types
+      $ Args.extensions)
   in
   let info =
     let doc = "TODO" in

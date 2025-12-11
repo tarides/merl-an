@@ -4,7 +4,7 @@ type t
 (** Represents a sample set on a fixed file for a fixed merlin query type. *)
 
 val generate :
-  sample_size:int ->
+  per_file_samples:int ->
   id_counter:int ->
   File.t ->
   Merlin.Query_type.t ->
@@ -12,8 +12,8 @@ val generate :
 (** Given a source code file [f] and a merlin query type [qt], we consider all
     locations in the file that the given query type can act on. Let's call the
     set of all those locations [population]. Then,
-    [generate ~sample_size ~id_counter f qt] generates a sample set of size
-    [min sample_size <popultion size>] of that population with integer IDs
+    [generate ~per_file_samples ~id_counter f qt] generates a sample set of size
+    [min per_file_samples <popultion size>] of that population with integer IDs
     starting at [id_counter]. In case of success, it returns the generated
     sample set together with an updated [id_counter]. *)
 

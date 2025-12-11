@@ -5,7 +5,7 @@ module Random_state : sig
   type t
   (** A random state, which allows deterministic random operations. *)
 
-  val make : File.t -> t
+  val make : string -> t
   (** Creates a random state from a file name. The state is needed during the
       reservoir update process *)
 end

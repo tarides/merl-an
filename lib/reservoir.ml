@@ -25,8 +25,7 @@ let init_state ~random_state k =
 module Random_state = struct
   type t = Random.State.t
 
-  let make file =
-    let str = File.filename file in
+  let make str =
     let char_size = 8 in
     let int_chars = (Sys.int_size + (char_size - 1)) / char_size in
     let length = String.length str in

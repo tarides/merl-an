@@ -54,12 +54,23 @@ let cache_workflow =
       & opt e Merl_an.Merlin.Cache_workflow.Full_cache
       & info [ "cache" ] ~doc)
 
-let sample_size =
-  (* FIXME: Make that a relative numer: relative to the size of the file. *)
-  let doc = "Number of samples per file. Defaults to 30." in
+let per_file_samples =
+  let doc = "Number of samples per file. Defaults to 10." in
   named
-    (fun x -> `Sample_size x)
-    Arg.(value & opt int 30 & info [ "sample-size"; "s" ] ~doc)
+    (fun x -> `File_samples x)
+    Arg.(value & opt int 10 & info [ "per-file-samples"; "s" ] ~doc)
+
+let total_samples =
+  let doc =
+    "Limits the total number of samples to generate. The tool randomly selects \
+     enough files to reach this limit and takes --per-file-samples samples \
+     from each file (default: 10). As each file contributes exactly \
+     --per-file-samples samples, --total-samples is rounded down to the \
+     nearest multiple if needed."
+  in
+  named
+    (fun x -> `Total_samples x)
+    Arg.(value & opt (some int) None & info [ "total_samples"; "t" ] ~doc)
 
 let query_types =
   let doc =

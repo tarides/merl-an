@@ -23,9 +23,11 @@ val cache_workflow : [> `Cache of Merl_an.Merlin.Cache_workflow.t ] Term.t
     fully initialized cache: it uses the merlin server frontend and initializes
     the cache 100%.*)
 
-val sample_size : [ `Sample_size of int ] Term.t
-(** Number of samples per file. Defaults to 30.*)
-(* FIXME: Make that a relative numer: relative to the size of the file. *)
+val per_file_samples : [ `File_samples of int ] Term.t
+(** Number of samples per file. Defaults to 10.*)
+
+val total_samples : [ `Total_samples of int option ] Term.t
+(** Limit on the number of samples across the whole project.*)
 
 val query_types : [> `Query_types of Merl_an.Merlin.Query_type.t list ] Term.t
 (** List of merlin commands you want to be analyzed. Defaults to all of them. *)
