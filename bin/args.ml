@@ -117,6 +117,10 @@ let no_full =
   let doc = "Don't dump the full Merlin response." in
   named (fun x -> `No_full x) Arg.(value & flag & info [ "no-full" ] ~doc)
 
+let force_yes =
+  let doc = "Automatically answer yes to all prompts." in
+  named (fun x -> `Force_yes x) Arg.(value & flag & info [ "yes"; "y" ] ~doc)
+
 let no_distilled_data =
   let doc =
     "Don't dump the distillation of the Merlin responses down into category \

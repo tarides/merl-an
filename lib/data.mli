@@ -18,10 +18,11 @@ module Make (_ : Backend.Data_tables) : sig
       (mutable). *)
 
   (* TODO: this shouldn't be only exactly merlins and dump_dir, but all configuration data. and the data should be stored in Data.t as well*)
-  val init : Merlin.t -> Fpath.t -> t
+  val init : force_yes:bool -> Merlin.t -> Fpath.t -> (t, Rresult.R.msg) result
   (** [init ~pure dir_path] returns a data instance with empty mutable content.
       The provided path [dir_path] is the path of the directory, inside which
-      the data will be persisted as json-line-files. *)
+      the data will be persisted as json-line-files. Returns and error if
+      [dir_path] already exists and the user decides to abort. *)
 
   val init_cache : t -> bool
 

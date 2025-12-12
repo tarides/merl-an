@@ -44,6 +44,9 @@ val no_full : [> `No_full of bool ] Term.t
 (** In [behavior] cmd, configures whether the whole Merlin response of each
     query will be dumped. *)
 
+val force_yes : [> `Force_yes of bool ] Term.t
+(** Automatically answer yes to all prompts. *)
+
 val no_distilled_data : [> `No_distilled_data of bool ] Term.t
 (** In [behavior] cmd, configures whether the the following simplification of
     the Merlin response of each query will be dumped: Dump whether the return

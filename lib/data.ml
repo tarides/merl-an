@@ -15,16 +15,18 @@ module Make (B : Backend.Data_tables) = struct
   type t = { dump_dir : Fpath.t; mutable content : B.t; merlin : Merlin.t }
   [@@warning "-unused-field"]
 
-  let create_dir_recursively data_path =
+  let create_dir_recursively ~force_yes data_path =
     let dir = Fpath.to_string data_path in
-    if Sys.file_exists dir then (
-      (* possible TODO: prompt would be nicer *)
-      Format.printf
-        "Your data directory %a already exists. So the data in there will be \
-         overriden. Sure you want that?? If not, you should interrupt now.\n\
-         %!"
-        Fpath.pp data_path;
-      Unix.sleep 60)
+    let question =
+      Format.asprintf
+        "Your data directory %a already exists, so the data in there will be \
+         overridden. Sure you want to proceed?"
+        Fpath.pp data_path
+    in
+    if
+      Sys.file_exists dir
+      && not Prompt.(ask_yn ~question ~default:Yes ~force_yes)
+    then Error (`Msg "Operation cancelled.\n")
     else
       let rec get_all_subpaths acc = function
         | _ :: rest as all ->
@@ -35,6 +37,7 @@ module Make (B : Backend.Data_tables) = struct
 
       Fpath.segs data_path |> List.rev |> get_all_subpaths []
       |> List.iter (fun dir -> try Sys.mkdir dir 0o777 with _ -> ())
+      |> Result.ok
 
   let init_cache d = B.init_cache d.content
 
@@ -53,15 +56,16 @@ module Make (B : Backend.Data_tables) = struct
             false)
 
   (* TODO: this shouldn't be only exactly dump_dir, but all configuration data. and the data should be stored in Data.t as well*)
-  let init merlin dump_dir =
-    create_dir_recursively dump_dir;
+  let init ~force_yes merlin dump_dir =
+    let open Result.Syntax in
+    let* () = create_dir_recursively ~force_yes dump_dir in
     let tables = B.create_initial merlin in
     let data_files = B.all_files () in
     create_files dump_dir data_files;
     if some_file_isnt_writable dump_dir data_files then (
       Format.eprintf "It's not possible to write to the data files\n%!";
       exit 20)
-    else { dump_dir; content = tables; merlin }
+    else Ok { dump_dir; content = tables; merlin }
 
   let update t { id; responses; cmd; file; loc; query_type } =
     B.update_analysis_data ~id ~responses ~cmd ~file ~loc ~query_type t.content

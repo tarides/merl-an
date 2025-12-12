@@ -12,4 +12,5 @@ val analyze :
   query_types:Merlin.Query_type.t list ->
   filter_outliers:bool ->
   extensions:string list ->
+  force_yes:bool ->
   (unit, Rresult.R.msg) Result.t
