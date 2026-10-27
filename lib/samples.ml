@@ -77,7 +77,7 @@ let generate ~per_file_samples ~id_counter file query_type =
       in
       Some ({ samples; file; query_type }, id_counter + per_file_samples)
 
-let analyze ~init_cache ~merlin ~repeats ~update ~filter_outliers ~verbose
+let analyze ~init_cache ~merlin ~repeats ~stream ~filter_outliers ~verbose
     { samples; file; query_type } =
   let open Result.Syntax in
   if List.is_empty samples then
@@ -121,7 +121,7 @@ let analyze ~init_cache ~merlin ~repeats ~update ~filter_outliers ~verbose
           let responses =
             if filter_outliers then fltr_outliers responses else responses
           in
-          update { Data.id; responses; cmd; file; loc; query_type };
+          stream { Data.id; responses; cmd; file; loc; query_type };
           loop rest
     in
     loop samples

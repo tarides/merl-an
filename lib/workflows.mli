@@ -1,7 +1,7 @@
 open! Import
 
 val analyze :
-  backend:(module Backend.Data_tables) ->
+  backend:Data.backend ->
   repeats:int ->
   cache_workflow:Merlin.Cache_workflow.t ->
   merlin_path:string ->

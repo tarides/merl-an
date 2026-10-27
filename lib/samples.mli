@@ -21,7 +21,7 @@ val analyze :
   init_cache:bool ->
   merlin:Merlin.t ->
   repeats:int ->
-  update:(Data.sample -> unit) ->
+  stream:(Data.sample -> unit) ->
   filter_outliers:bool ->
   verbose:bool ->
   t ->

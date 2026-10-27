@@ -3,4 +3,4 @@
  (public_name merl-an)
  (libraries ppxlib str unix fpath bos ptime rresult)
  (preprocess
-  (pps ppx_yojson_conv ppx_enumerate ppx_fields_conv)))
+  (pps ppx_yojson_conv ppx_enumerate)))

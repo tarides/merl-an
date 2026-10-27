@@ -1,6 +1,5 @@
 open! Import
 
-(* FIXME: once the tables structure is improved, this type should be split into several types and renamed *)
 type sample = {
   id : int;
   responses : Merlin.Response.t list;
@@ -10,36 +9,34 @@ type sample = {
   query_type : Merlin.Query_type.t;
 }
 
-module Make (_ : Backend.Data_tables) : sig
-  type t
-  (** The data that's being collected by the tool. Consists of two pieces of
-      information: the configuration with which the data is collected
-      (unmutable) and the data that's being collected step by step by the tool
-      (mutable). *)
+type behavior_config = { full : bool; distilled_data : bool }
+type backend = Performance | Behavior of behavior_config | Benchmark
 
-  (* TODO: this shouldn't be only exactly merlins and dump_dir, but all configuration data. and the data should be stored in Data.t as well*)
-  val init : force_yes:bool -> Merlin.t -> Fpath.t -> (t, Rresult.R.msg) result
-  (** [init ~pure dir_path] returns a data instance with empty mutable content.
-      The provided path [dir_path] is the path of the directory, inside which
-      the data will be persisted as json-line-files. Returns and error if
-      [dir_path] already exists and the user decides to abort. *)
+type t
+(** The streaming channels and configuration used to collect and write analysis
+    data. *)
 
-  val init_cache : t -> bool
+val init :
+  backend:backend ->
+  force_yes:bool ->
+  Merlin.t ->
+  Fpath.t ->
+  (t, Rresult.R.msg) result
+(** [init ~backend ~force_yes merlin dir_path] returns a data instance for the
+    chosen [backend] with initialized streaming channels. The provided path
+    [dir_path] is the path of the directory, inside which the data will be
+    persisted as json-line-files. Returns an error if [dir_path] already exists
+    and the user decides to abort. *)
 
-  val update : t -> sample -> unit
-  (** Update the data by appending analyzis data of one sample to it. *)
+val init_cache : t -> bool
+(** Returns whether the cache should be initialized for this backend. *)
 
-  val persist_logs : log:Logs.t -> t -> unit
-  (** Add the log to one of the data tables; the table will later be dumped to
-      disk when dumping all tables. *)
+val write : t -> sample -> unit
+(** Write analysis data of one sample to the streaming channels. *)
 
-  val wrap_up : t -> proj_paths:Fpath.t list -> unit
-  (** Call this, before ending the program. It makes sure there's no data left
-      in memory anymore and, in case there still is, dumps it (TODO!). Depending
-      on the backend kind, it also generates and dumps some metadata. *)
+val persist_logs : log:Logs.t -> t -> unit
+(** Append the log to the logs output stream. *)
 
-  val dump : t -> unit
-  (** [dump data] writes the content of [data] into json-line files. The
-      directory, into which the files will be written, is part of the
-      configuration data stored in the [Data.t] value. *)
-end
+val wrap_up : t -> proj_paths:Fpath.t list -> unit
+(** Call this before ending the program. Depending on the backend kind, it
+    generates and writes metadata or summaries and closes open streams. *)
