@@ -97,6 +97,7 @@ module Response : sig
 
   val get_return_class : t -> (return_class, Logs.t) result
   val get_query_num : t -> (int, Logs.t) result
+  val get_error_message : t -> string
 end
 
 module Cmd : sig
@@ -139,3 +140,8 @@ val stop_server : t -> unit
 (** Stops the [ocamlmerlin] server. This should be called at the end of the
     whole process, if one of the frontends is [Server]; does nothing if the
     frontend is [Single] *)
+
+val check_setup : ?verbose:bool -> File.t -> t -> (unit, string) result
+(** [check_setup file merlin] runs a global errors query on [file]. Returns
+    [Ok ()] if Merlin reports no errors, or [Error msg] containing the error
+    message(s) returned by Merlin. *)

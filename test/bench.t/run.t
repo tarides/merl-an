@@ -1,4 +1,8 @@
   $ merl-an benchmark -r 2 -s 2 -p bench.ml,bench1.ml --data=test-data
+  [WARNING] Merlin reported an error on bench.ml:
+  No config found for file bench.ml. Try calling 'dune build'.
+  Unbound value List.fo
+  Unbound value List.ma
 
   $ jq '.results |= map( .metrics |= map(.value |= map(0)))' test-data/bench.json
   {
