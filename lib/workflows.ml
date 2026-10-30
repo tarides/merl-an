@@ -119,26 +119,19 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
                       D.persist_logs ~log data;
                       new_id_counter)
           in
-          let _last_sample_id, _ =
+          let _last_sample_id =
             List.fold_left
-              (fun (id_counter, file_idx) file ->
-                let files_left = total_files - file_idx in
-                let queries_in_file = ref 0 in
-                let write sample =
-                  D.write data sample;
-                  incr queries_in_file;
-                  Progress.update progress ~file_idx ~file
-                    ~queries:!queries_in_file
-                in
+              (fun id_counter file ->
+                Progress.start_file progress file;
+                let write = Progress.wrap_write progress (D.write data) in
                 let new_id_counter =
                   List.fold_left
                     (fun id_counter query_type ->
                       stream_query_data ~write id_counter (file, query_type))
                     id_counter query_types
                 in
-                Progress.finish_file progress ~file ~queries:!queries_in_file
-                  ~files_left;
-                (new_id_counter, file_idx + 1))
-              (0, 1) files
+                Progress.finish_file progress;
+                new_id_counter)
+              0 files
           in
           Ok ()))
