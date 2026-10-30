@@ -359,46 +359,26 @@ let behavior config =
       t.distilled_data
       |> Option.iter (fun oc ->
           match responses with
-          | [ resp ] -> (
-              match
-                ( Merlin.Response.get_return_class resp,
-                  Merlin.Response.get_query_num resp )
-              with
-              | Ok return, Ok query_num ->
-                  let new_entry =
-                    {
-                      Distilled_data.sample_id = id;
-                      return = Some return;
-                      query_num = Some query_num;
-                      cmd;
-                    }
-                  in
-                  write_json_line oc Distilled_data.pp new_entry
-              | Error log, Ok query_num ->
-                  persist_logs ~log t;
-                  let new_entry =
-                    {
-                      Distilled_data.sample_id = id;
-                      return = None;
-                      query_num = Some query_num;
-                      cmd;
-                    }
-                  in
-                  write_json_line oc Distilled_data.pp new_entry
-              | Ok return, Error log ->
-                  persist_logs ~log t;
-                  let new_entry =
-                    {
-                      Distilled_data.sample_id = id;
-                      return = Some return;
-                      query_num = None;
-                      cmd;
-                    }
-                  in
-                  write_json_line oc Distilled_data.pp new_entry
-              | Error log1, Error log2 ->
-                  persist_logs ~log:log1 t;
-                  persist_logs ~log:log2 t)
+          | [ resp ] ->
+              let opt_and_log res =
+                Result.fold
+                  ~ok:(fun rc -> Some rc)
+                  ~error:(fun log ->
+                    persist_logs ~log t;
+                    None)
+                  res
+              in
+              let return =
+                opt_and_log (Merlin.Response.get_return_class resp)
+              in
+              let query_num =
+                opt_and_log (Merlin.Response.get_query_num resp)
+              in
+              if Option.is_some return || Option.is_some query_num then
+                let new_entry =
+                  { Distilled_data.sample_id = id; return; query_num; cmd }
+                in
+                write_json_line oc Distilled_data.pp new_entry
           | _ -> (*FIXME*) ())
 
     let with_channels ~data_dir ~merlin:_ ~proj_paths:_ f =
