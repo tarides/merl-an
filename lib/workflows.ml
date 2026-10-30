@@ -43,6 +43,8 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
         let make_sample ~id:_ file = file in
         Reservoir.get_samples ~make_sample ~id_counter:1 reservoir
   in
+  let total_files = List.length files in
+  let progress = Progress.create ~total_files () in
   let module D = Data.Make (Backend) in
   Fun.protect
     ~finally:(fun () ->
@@ -50,8 +52,7 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
     (fun () ->
       D.with_data ~force_yes ~merlin ~data_dir ~proj_paths (fun data ->
           let init_cache = D.init_cache data in
-          let stream_query_data id_counter (file, query_type) =
-            let write = D.write data in
+          let stream_query_data ~write id_counter (file, query_type) =
             if Merlin.Query_type.is_global query_type then
               let () =
                 let d =
@@ -97,8 +98,18 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
                       new_id_counter)
           in
           let _last_sample_id =
-            (* The traversal is done in files -> query_types order. *)
-            List.fold_over_product ~l1:files ~l2:query_types ~init:0
-              stream_query_data
+            List.fold_left
+              (fun id_counter file ->
+                Progress.start_file progress file;
+                let write = Progress.wrap_write progress (D.write data) in
+                let new_id_counter =
+                  List.fold_left
+                    (fun id_counter query_type ->
+                      stream_query_data ~write id_counter (file, query_type))
+                    id_counter query_types
+                in
+                Progress.finish_file progress;
+                new_id_counter)
+              0 files
           in
           Ok ()))
