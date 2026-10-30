@@ -29,15 +29,14 @@ module type Data_channels = sig
     'a
 end
 
-module Field = struct
-  (* A custom augmentation of [Fieldslib.Field] for [Data_channels.t] *)
-
-  include Fieldslib.Field
-
-  let to_filename field =
-    let field_name = Fieldslib.Field.name field in
-    Fpath.(add_ext ".json" @@ v field_name)
-end
+let performances_file = Fpath.v "performances.json"
+let query_responses_file = Fpath.v "query_responses.json"
+let commands_file = Fpath.v "commands.json"
+let logs_file = Fpath.v "logs.json"
+let merlin_file = Fpath.v "merlin.json"
+let full_responses_file = Fpath.v "full_responses.json"
+let distilled_data_file = Fpath.v "distilled_data.json"
+let bench_file = Fpath.v "bench.json"
 
 let write_json_line oc pp data =
   let ppf = Format.formatter_of_out_channel oc in
@@ -251,7 +250,6 @@ module Performance = struct
     logs : out_channel;
     merlin : Merlin.t;
   }
-  [@@deriving fields]
 
   let init_cache p = Merlin.is_server p.merlin
   let kind = Perf
@@ -303,27 +301,26 @@ module Performance = struct
 
   let with_channels ~data_dir ~merlin ~proj_paths f =
     with_open_channels (fun open_channel ->
-        let open_field field =
-          open_channel data_dir (Field.to_filename field)
-        in
-        let performances = open_field Fields.performances in
-        let query_responses = open_field Fields.query_responses in
-        let commands = open_field Fields.commands in
-        let logs = open_field Fields.logs in
+        let performances = open_channel data_dir performances_file in
+        let query_responses = open_channel data_dir query_responses_file in
+        let commands = open_channel data_dir commands_file in
+        let logs = open_channel data_dir logs_file in
         let t = { performances; query_responses; commands; logs; merlin } in
         Fun.protect
           ~finally:(fun () ->
-            write_single Merlin.pp data_dir
-              (Field.to_filename Fields.merlin)
-              merlin;
+            write_single Merlin.pp data_dir merlin_file merlin;
             Metadata.produce_and_write ~data_dir ~proj_paths ~merlin)
           (fun () -> f t))
 
   let all_files () =
-    let f = Field.to_filename in
-    Metadata.file_name
-    :: Fields.to_list ~performances:f ~query_responses:f ~commands:f ~logs:f
-         ~merlin:f
+    [
+      Metadata.file_name;
+      performances_file;
+      query_responses_file;
+      commands_file;
+      logs_file;
+      merlin_file;
+    ]
 end
 
 type behavior_config = { full : bool; distilled_data : bool }
@@ -336,7 +333,6 @@ let behavior config =
       commands : out_channel;
       logs : out_channel;
     }
-    [@@deriving fields]
 
     let kind = Regr
     let persist_logs ~log t = write_json_line t.logs Logs.pp log
@@ -403,28 +399,24 @@ let behavior config =
 
     let with_channels ~data_dir ~merlin:_ ~proj_paths:_ f =
       with_open_channels (fun open_channel ->
-          let open_field field =
-            open_channel data_dir (Field.to_filename field)
-          in
           let full_responses =
-            if config.full then Some (open_field Fields.full_responses)
+            if config.full then Some (open_channel data_dir full_responses_file)
             else None
           in
           let distilled_data =
             if config.distilled_data then
-              Some (open_field Fields.distilled_data)
+              Some (open_channel data_dir distilled_data_file)
             else None
           in
-          let commands = open_field Fields.commands in
-          let logs = open_field Fields.logs in
+          let commands = open_channel data_dir commands_file in
+          let logs = open_channel data_dir logs_file in
           let t = { full_responses; distilled_data; commands; logs } in
           f t)
 
     let init_cache _ = false
 
     let all_files () =
-      let f = Field.to_filename in
-      Fields.to_list ~full_responses:f ~distilled_data:f ~commands:f ~logs:f
+      [ full_responses_file; distilled_data_file; commands_file; logs_file ]
   end in
   (module Behavior : Data_channels)
 
@@ -436,15 +428,13 @@ module Benchmark = struct
     logs : out_channel;
     merlin : Merlin.t;
   }
-  [@@deriving fields]
 
   let kind = Bench
   let init_cache b = Merlin.is_server b.merlin
   let persist_logs ~log t = write_json_line t.logs Logs.pp log
 
   let all_files () =
-    let f = Field.to_filename in
-    Fields.to_list ~bench:f ~query_responses:f ~commands:f ~logs:f ~merlin:f
+    [ bench_file; query_responses_file; commands_file; logs_file; merlin_file ]
 
   let write_analysis_data ~id ~responses ~cmd ~file:_file
       ~loc:(_loc : Import.location) ~query_type t =
@@ -477,12 +467,9 @@ module Benchmark = struct
 
   let with_channels ~data_dir ~merlin ~proj_paths:_ f =
     with_open_channels (fun open_channel ->
-        let open_field field =
-          open_channel data_dir (Field.to_filename field)
-        in
-        let query_responses = open_field Fields.query_responses in
-        let commands = open_field Fields.commands in
-        let logs = open_field Fields.logs in
+        let query_responses = open_channel data_dir query_responses_file in
+        let commands = open_channel data_dir commands_file in
+        let logs = open_channel data_dir logs_file in
         let t =
           {
             bench = { results = StringMap.empty };
@@ -494,11 +481,7 @@ module Benchmark = struct
         in
         Fun.protect
           ~finally:(fun () ->
-            write_single Benchmark_summary.pp data_dir
-              (Field.to_filename Fields.bench)
-              t.bench;
-            write_single Merlin.pp data_dir
-              (Field.to_filename Fields.merlin)
-              merlin)
+            write_single Benchmark_summary.pp data_dir bench_file t.bench;
+            write_single Merlin.pp data_dir merlin_file merlin)
           (fun () -> f t))
 end
