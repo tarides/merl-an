@@ -1,4 +1,6 @@
   $ merl-an -r 1 -s 1 -p files/nested-dir/perf.ml --data=test-data
+  [WARNING] Merlin reported an error on files/nested-dir/perf.ml:
+  No config found for file perf.ml. Try calling 'dune build'.
 
   $ cat test-data/performances.json |
   > jq -c '.timings |= 0

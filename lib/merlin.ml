@@ -248,6 +248,24 @@ module Response = struct
           (Logs.Error
              "Error while extracting query num: Response should have key \
               called query_num")
+
+  let get_error_message resp =
+    let (`Assoc fields) = strip_location resp in
+    match List.assoc_opt "value" fields with
+    | Some (`List items) ->
+        List.filter_map
+          (function
+            | `Assoc f -> (
+                match List.assoc_opt "message" f with
+                | Some (`String s) -> Some s
+                | _ -> None)
+            | `String s -> Some s
+            | _ -> None)
+          items
+        |> String.concat "\n"
+    | Some (`String s) -> s
+    | Some json -> Yojson.Safe.to_string json
+    | None -> "Unknown Merlin error"
 end
 
 module Cmd = struct
@@ -378,3 +396,17 @@ let stop_server { path; _ } =
   match Sys.command command with
   | 255 -> ()
   | code -> failwith ("merlin exited with code " ^ string_of_int code)
+
+let check_setup ?(verbose = false) file merlin =
+  let cmd =
+    Format.asprintf "%s single errors -filename %a < %a"
+      (Fpath.to_string merlin.path)
+      File.pp file File.pp file
+  in
+  if verbose then Format.printf "check setup: %s\n%!" cmd;
+  match Cmd.run_once cmd with
+  | exception exc -> Error (Printexc.to_string exc)
+  | resp -> (
+      match Response.get_return_class resp with
+      | Ok (Return Empty) -> Ok ()
+      | _ -> Error (Response.get_error_message resp))

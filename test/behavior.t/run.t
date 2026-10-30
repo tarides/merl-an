@@ -1,4 +1,6 @@
   $ merl-an behavior -s 1 -p test.ml,test1.ml --data=test-data
+  [WARNING] Merlin reported an error on test.ml:
+  No config found for file test.ml. Try calling 'dune build'.
 
   $ cat test-data/distilled_data.json
   {"sample_id":13,"cmd":"ocamlmerlin server errors  -filename test1.ml < test1.ml","return":["Return",["Other"]],"query_num":13}
