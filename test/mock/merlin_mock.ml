@@ -9,10 +9,24 @@ let exception_case () =
   in
   print_endline output
 
+let stderr_case () =
+  prerr_endline
+    "Fatal error: exception Invalid_argument(\"Ppxlib.Longident.parse(empty \
+     string): \\\"\\\"\")";
+  let output =
+    {| {
+     "class": "return",
+     "value": [],
+     "notifications": []
+     }|}
+  in
+  print_endline output
+
 let () =
   let () =
     match Sys.argv.(1) with
     | "exception" -> exception_case ()
+    | "stderr" -> stderr_case ()
     | _ | (exception _) -> default_case ()
   in
   exit 0

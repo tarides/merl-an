@@ -49,6 +49,7 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
       if Merlin.is_server merlin then Merlin.stop_server merlin else ())
     (fun () ->
       D.with_data ~force_yes ~merlin ~data_dir ~proj_paths (fun data ->
+          let notify_log log = D.persist_logs ~log data in
           let* () =
             match files with
             | [] -> Ok ()
@@ -78,7 +79,9 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
               let () =
                 let d =
                   let* cmd = Merlin.Cmd.make ~query_type ~file merlin in
-                  let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
+                  let* responses =
+                    Merlin.Cmd.run ~notify_log ~verbose ~repeats cmd
+                  in
                   Ok (cmd, responses)
                 in
                 match d with
@@ -110,8 +113,8 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
                   id_counter
               | Some (samples, new_id_counter) -> (
                   match
-                    Samples.analyze ~init_cache ~merlin ~repeats ~stream:write
-                      ~filter_outliers ~verbose samples
+                    Samples.analyze ~notify_log ~init_cache ~merlin ~repeats
+                      ~stream:write ~filter_outliers ~verbose samples
                   with
                   | Ok () -> new_id_counter
                   | Error log ->

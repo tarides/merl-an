@@ -18,6 +18,7 @@ val generate :
     sample set together with an updated [id_counter]. *)
 
 val analyze :
+  ?notify_log:(Logs.t -> unit) ->
   init_cache:bool ->
   merlin:Merlin.t ->
   repeats:int ->

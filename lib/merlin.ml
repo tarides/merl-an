@@ -61,33 +61,84 @@ let is_server merlin = Cache_workflow.uses_server merlin.cache_workflow
 let basic_cmd ppf { path; cache_workflow; _ } =
   Format.fprintf ppf "%s" (Cache_workflow.print path cache_workflow)
 
-let untimed_query_generic ~f cmd =
-  let ic = Unix.open_process_in cmd in
+let remove_temp_file path =
+  try if Sys.file_exists path then Sys.remove path
+  with Sys_error msg ->
+    Format.eprintf "[WARNING] Failed to remove temp file %s: %s\n%!" path msg
+
+let err_file =
+  lazy
+    (let path = Filename.temp_file "merl_an_" ".stderr" in
+     at_exit (fun () -> remove_temp_file path);
+     path)
+
+let untimed_query_generic ?notify_log ~f cmd =
+  let err_file = Lazy.force err_file in
+  let redirect_cmd = Format.asprintf "%s 2> %s" cmd (Filename.quote err_file) in
+  let ic = Unix.open_process_in redirect_cmd in
+  let read_err () =
+    try
+      if (Unix.stat err_file).st_size = 0 then ""
+      else
+        let ch = open_in err_file in
+        Fun.protect
+          ~finally:(fun () -> close_in_noerr ch)
+          (fun () -> In_channel.input_all ch)
+    with _ -> ""
+  in
+  let clear_err () =
+    try
+      let ch = open_out err_file in
+      close_out ch
+    with _ -> ()
+  in
   match f ic with
   | res -> (
-      match Unix.close_process_in ic with
-      | Unix.WEXITED 0 -> res
+      let status = Unix.close_process_in ic in
+      let err_content = read_err () in
+      clear_err ();
+      match status with
+      | Unix.WEXITED 0 ->
+          let trimmed_err = String.trim err_content in
+          if String.length trimmed_err > 0 then
+            Option.iter
+              (fun notify -> notify (Logs.Warning trimmed_err))
+              notify_log;
+          res
       | Unix.WEXITED code ->
-          Format.eprintf "merlin exited with code %s\n%!" (string_of_int code);
+          let trimmed_err = String.trim err_content in
+          if String.length trimmed_err > 0 then
+            Format.eprintf "merlin exited with code %s:\n%s\n%!"
+              (string_of_int code) trimmed_err
+          else
+            Format.eprintf "merlin exited with code %s\n%!" (string_of_int code);
           exit 1
       | _ ->
           Format.eprintf "merlin closed unexpectedly\n%!";
           exit 2)
   | exception e ->
       ignore (Unix.close_process_in ic);
+      let err_content = read_err () in
+      clear_err ();
+      let trimmed_err = String.trim err_content in
+      let err_detail =
+        if String.length trimmed_err > 0 then
+          Format.sprintf "\nstderr:\n%s" trimmed_err
+        else ""
+      in
       let s =
-        Format.sprintf "exception while running [%s]: %s\n%!" cmd
-          (Printexc.to_string e)
+        Format.sprintf "exception while running [%s]: %s%s\n%!" cmd
+          (Printexc.to_string e) err_detail
       in
       failwith s
 
-let untimed_query_json cmd =
+let untimed_query_json ?notify_log cmd =
   let f = Yojson.Safe.from_channel in
-  untimed_query_generic ~f cmd
+  untimed_query_generic ?notify_log ~f cmd
 
-let untimed_query_str cmd =
+let untimed_query_str ?notify_log cmd =
   let f = input_line in
-  untimed_query_generic ~f cmd
+  untimed_query_generic ?notify_log ~f cmd
 
 let make ?comment path cache_workflow =
   let cmd =
@@ -373,29 +424,29 @@ module Cmd = struct
     Format.asprintf "%a errors -filename %a < %a" basic_cmd merlin File.pp file
       File.pp file
 
-  let run_once cmd =
+  let run_once ?notify_log cmd =
     (* FIXME: it would be better to catch the exception here. *)
-    let repl = untimed_query_json cmd in
+    let repl = untimed_query_json ?notify_log cmd in
     repl
 
-  let run ?(verbose = false) ~repeats cmd =
+  let run ?notify_log ?(verbose = false) ~repeats cmd =
     if verbose then Format.printf "%s\n%!" cmd;
     try
       let rec loop responses = function
         | 0 -> responses
         | n ->
-            let new_resp = run_once cmd in
+            let new_resp = run_once ?notify_log cmd in
             loop (new_resp :: responses) (n - 1)
       in
       Ok (loop [] repeats)
     with exc -> Error (Logs.Error (Printexc.to_string exc))
 end
 
-let init_cache ?(verbose = false) file merlin =
+let init_cache ?notify_log ?(verbose = false) file merlin =
   let cmd = Cmd.some_global_cmd file merlin in
   if verbose then Format.printf "cache warmup: %s\n%!" cmd;
   try
-    let _ = Cmd.run_once cmd in
+    let _ = Cmd.run_once ?notify_log cmd in
     Ok ()
   with exc -> Error (Logs.Error (Printexc.to_string exc))
 

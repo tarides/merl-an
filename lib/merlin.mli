@@ -122,19 +122,30 @@ module Cmd : sig
       file; and a [Merlin.t] value [merlin] *)
 
   val run :
-    ?verbose:bool -> repeats:int -> t -> (Response.t list, Logs.t) Result.t
+    ?notify_log:(Logs.t -> unit) ->
+    ?verbose:bool ->
+    repeats:int ->
+    t ->
+    (Response.t list, Logs.t) Result.t
   (** [run ~repeats cmd] runs the concrete [ocamlmerlin] command [cmd]. It runs
       that command [repeat] times in a row and returns the [repeats] responses.
       If [verbose] is true, the command is printed on stdout before it is run.
-  *)
+      If [notify_log] is provided, any non-fatal output printed to stderr by the
+      command is reported via [notify_log]. *)
 end
 with type merlin := t
 
-val init_cache : ?verbose:bool -> File.t -> t -> (unit, Logs.t) Result.t
+val init_cache :
+  ?notify_log:(Logs.t -> unit) ->
+  ?verbose:bool ->
+  File.t ->
+  t ->
+  (unit, Logs.t) Result.t
 (** [init_cache file merlin] inits the [merlin] cache on [file]. This should be
     called if one of the frontends is [Server]. It inits the cache by running a
     global command on the file. If [verbose] is true, the command is printed on
-    stdout before it is run. *)
+    stdout before it is run. If [notify_log] is provided, any output on stderr
+    is reported via [notify_log]. *)
 
 val stop_server : t -> unit
 (** Stops the [ocamlmerlin] server. This should be called at the end of the
