@@ -2,9 +2,9 @@ open! Import
 
 type t
 
-val create : ?is_tty:bool -> total_files:int -> unit -> t
-(** [create ?is_tty ~total_files ()] creates a new progress tracker. If [is_tty]
-    is not specified, it is detected via [Unix.isatty Unix.stderr]. *)
+val create : total_files:int -> unit -> t
+(** [create ~total_files ()] creates a new progress tracker. It detects whether
+    stderr is an interactive terminal via [Unix.isatty Unix.stderr]. *)
 
 val start_file : t -> File.t -> unit
 (** [start_file t file] records that analysis of [file] has begun and prints an

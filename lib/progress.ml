@@ -8,10 +8,8 @@ type t = {
   mutable queries_in_file : int;
 }
 
-let create ?is_tty ~total_files () =
-  let is_tty =
-    match is_tty with Some b -> b | None -> Unix.isatty Unix.stderr
-  in
+let create ~total_files () =
+  let is_tty = Unix.isatty Unix.stderr in
   {
     is_tty;
     total_files;
