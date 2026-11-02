@@ -49,6 +49,28 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
       if Merlin.is_server merlin then Merlin.stop_server merlin else ())
     (fun () ->
       D.with_data ~force_yes ~merlin ~data_dir ~proj_paths (fun data ->
+          let* () =
+            match files with
+            | [] -> Ok ()
+            | sample_file :: _ -> (
+                match Merlin.check_setup ~verbose sample_file merlin with
+                | Ok () -> Ok ()
+                | Error err ->
+                    let warning_msg =
+                      Format.asprintf "Merlin reported an error on %a:\n%s"
+                        File.pp sample_file err
+                    in
+                    Format.eprintf "[WARNING] %s\n%!" warning_msg;
+                    D.persist_logs ~log:(Logs.Warning warning_msg) data;
+                    if (not force_yes) && Unix.(isatty stdin) then
+                      let question =
+                        "Do you want to proceed with running merl-an anyway?"
+                      in
+                      if not (Prompt.ask_yn ~question ~default:No ~force_yes)
+                      then Error (`Msg "Operation cancelled.\n")
+                      else Ok ()
+                    else Ok ())
+          in
           let init_cache = D.init_cache data in
           let stream_query_data id_counter (file, query_type) =
             let write = D.write data in
