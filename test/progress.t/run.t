@@ -1,5 +1,9 @@
   $ faketty () {
-  >   script -qfec "$*" /dev/null
+  >   if [ "$(uname)" = "Darwin" ]; then
+  >     script -q -e /dev/null "$@"
+  >   else
+  >     script -q -e -c "$*" /dev/null
+  >   fi
   > }
 
   $ faketty merl-an behavior -y -s 1 -p files/test.ml,files/test2.ml --data=test-data
