@@ -226,7 +226,7 @@ module Performance = struct
       merlin_file;
     ]
 
-  let write_analysis_data ~id ~responses ~cmd ~file ~loc ~query_type t =
+  let write_analysis_data t { id; responses; cmd; file; loc; query_type } =
     let max_timing, timings, responses = extract_timings responses in
     let perf_data =
       { P.sample_id = id; timings; max_timing; file; query_type; loc }
@@ -262,7 +262,7 @@ module Behavior = struct
   let all_files () =
     [ full_responses_file; distilled_data_file; commands_file; logs_file ]
 
-  let write_analysis_data ~id ~responses ~cmd ~file:_ ~loc:_ ~query_type:_ t =
+  let write_analysis_data t { id; responses; cmd; _ } =
     Command.write t.commands ~id ~cmd;
     t.full_responses
     |> Option.iter (fun oc ->
@@ -322,7 +322,7 @@ module Behavior = struct
                 persist_logs ~log:log2 t)
         | _ -> (*FIXME*) ())
 
-  let with_channels config ~data_dir ~merlin:_ ~proj_paths:_ f =
+  let with_channels config ~data_dir f =
     with_open_channels (fun open_channel ->
         let full_responses =
           if config.full then Some (open_channel data_dir full_responses_file)
@@ -353,7 +353,7 @@ module Benchmark = struct
   let all_files () =
     [ bench_file; query_responses_file; commands_file; logs_file; merlin_file ]
 
-  let write_analysis_data ~id ~responses ~cmd ~file:_ ~loc:_ ~query_type t =
+  let write_analysis_data t { id; responses; cmd; query_type; _ } =
     let _max_timing, timings, responses = extract_timings responses in
     let metric =
       {
@@ -381,7 +381,7 @@ module Benchmark = struct
     Query_response.write_stripped t.query_responses ~id ~cmd ~responses;
     Command.write t.commands ~id ~cmd
 
-  let with_channels ~data_dir ~merlin ~proj_paths:_ f =
+  let with_channels ~data_dir ~merlin f =
     with_open_channels (fun open_channel ->
         let query_responses = open_channel data_dir query_responses_file in
         let commands = open_channel data_dir commands_file in
@@ -443,15 +443,23 @@ let some_file_isnt_writable data_path files =
           false)
     files
 
-type t = {
-  init_cache : bool;
-  write : sample -> unit;
-  persist_logs : log:Logs.t -> unit;
-}
+type t = Perf of Performance.t | Behav of Behavior.t | Bench of Benchmark.t
 
-let init_cache t = t.init_cache
-let write t sample = t.write sample
-let persist_logs ~log t = t.persist_logs ~log
+let init_cache = function
+  | Perf p -> Merlin.is_server p.merlin
+  | Behav _ -> false
+  | Bench b -> Merlin.is_server b.merlin
+
+let write t sample =
+  match t with
+  | Perf p -> Performance.write_analysis_data p sample
+  | Behav b -> Behavior.write_analysis_data b sample
+  | Bench b -> Benchmark.write_analysis_data b sample
+
+let persist_logs ~log = function
+  | Perf p -> Performance.persist_logs ~log p
+  | Behav b -> Behavior.persist_logs ~log b
+  | Bench b -> Benchmark.persist_logs ~log b
 
 let all_files = function
   | Performance -> Performance.all_files ()
@@ -461,38 +469,12 @@ let all_files = function
 let with_channels backend ~data_dir ~merlin ~proj_paths f =
   match backend with
   | Performance ->
-      Performance.with_channels ~data_dir ~merlin ~proj_paths (fun b ->
-          f
-            {
-              init_cache = Merlin.is_server merlin;
-              write =
-                (fun { id; responses; cmd; file; loc; query_type } ->
-                  Performance.write_analysis_data ~id ~responses ~cmd ~file ~loc
-                    ~query_type b);
-              persist_logs = (fun ~log -> Performance.persist_logs ~log b);
-            })
+      Performance.with_channels ~data_dir ~merlin ~proj_paths (fun p ->
+          f (Perf p))
   | Behavior config ->
-      Behavior.with_channels config ~data_dir ~merlin ~proj_paths (fun b ->
-          f
-            {
-              init_cache = false;
-              write =
-                (fun { id; responses; cmd; file; loc; query_type } ->
-                  Behavior.write_analysis_data ~id ~responses ~cmd ~file ~loc
-                    ~query_type b);
-              persist_logs = (fun ~log -> Behavior.persist_logs ~log b);
-            })
+      Behavior.with_channels config ~data_dir (fun b -> f (Behav b))
   | Benchmark ->
-      Benchmark.with_channels ~data_dir ~merlin ~proj_paths (fun b ->
-          f
-            {
-              init_cache = Merlin.is_server merlin;
-              write =
-                (fun { id; responses; cmd; file; loc; query_type } ->
-                  Benchmark.write_analysis_data ~id ~responses ~cmd ~file ~loc
-                    ~query_type b);
-              persist_logs = (fun ~log -> Benchmark.persist_logs ~log b);
-            })
+      Benchmark.with_channels ~data_dir ~merlin (fun b -> f (Bench b))
 
 (* TODO: this shouldn't be only exactly data_dir, but all configuration data. and the data should be stored in Data.t as well*)
 let with_data ~backend ~force_yes ~merlin ~data_dir ~proj_paths f =
