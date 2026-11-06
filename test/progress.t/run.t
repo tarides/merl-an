@@ -1,6 +1,6 @@
   $ faketty () {
   >   if [ "$(uname)" = "Darwin" ]; then
-  >     script -q -e /dev/null "$@" | tr -d '\004\010'
+  >     script -q -e /dev/null "$@" | tr -d '\010' | sed 's/^\^D//'
   >   else
   >     script -q -e -c "$*" /dev/null
   >   fi
