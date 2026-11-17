@@ -127,9 +127,9 @@ module Cmd : sig
     t ->
     (Response.t list * string list, Logs.t) Result.t
   (** [run ~repeats cmd] runs the concrete [ocamlmerlin] command [cmd]. It runs
-      that command [repeat] times in a row and returns a tuple of the [repeats] responses and a list of errors.
-      If [verbose] is true, the command is printed on stdout before it is run.
-  *)
+      that command [repeat] times in a row and returns a tuple of the [repeats]
+      responses and a list of errors. If [verbose] is true, the command is
+      printed on stdout before it is run. *)
 end
 with type merlin := t
 
