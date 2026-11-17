@@ -78,12 +78,17 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
               let () =
                 let d =
                   let* cmd = Merlin.Cmd.make ~query_type ~file merlin in
-                  let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
-                  Ok (cmd, responses)
+                  let* responses, errors =
+                    Merlin.Cmd.run ~verbose ~repeats cmd
+                  in
+                  Ok (cmd, responses, errors)
                 in
                 match d with
                 | Error log -> D.persist_logs ~log data
-                | Ok (cmd, responses) ->
+                | Ok (cmd, responses, errors) ->
+                    List.iter
+                      (fun err -> D.persist_logs ~log:(Logs.Error err) data)
+                      errors;
                     write
                       {
                         Data.id = id_counter;
@@ -111,7 +116,7 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
               | Some (samples, new_id_counter) -> (
                   match
                     Samples.analyze ~init_cache ~merlin ~repeats ~stream:write
-                      ~filter_outliers ~verbose samples
+                      ~filter_outliers ~verbose samples (D.persist_logs data)
                   with
                   | Ok () -> new_id_counter
                   | Error log ->
