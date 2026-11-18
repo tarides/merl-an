@@ -1,0 +1,4 @@
+(library
+     (name a)
+     (preprocess
+      (pps ppx_deriving.make)))
