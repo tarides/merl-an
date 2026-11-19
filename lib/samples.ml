@@ -78,7 +78,7 @@ let generate ~per_file_samples ~id_counter file query_type =
       Some ({ samples; file; query_type }, id_counter + per_file_samples)
 
 let analyze ~init_cache ~merlin ~repeats ~stream ~filter_outliers ~verbose
-    { samples; file; query_type } =
+    { samples; file; query_type } f =
   let open Result.Syntax in
   if List.is_empty samples then
     Error
@@ -95,7 +95,8 @@ let analyze ~init_cache ~merlin ~repeats ~stream ~filter_outliers ~verbose
       | [] -> Ok ()
       | { id; sample = loc, li } :: rest ->
           let* cmd = Merlin.Cmd.make ~query_type ~file ?li ~loc merlin in
-          let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
+          let* responses, errors = Merlin.Cmd.run ~verbose ~repeats cmd in
+          List.iter (fun e -> f ~log:(Logs.Error e)) errors;
           let fltr_outliers responses =
             let open Merlin.Response in
             (* If init_cache is false, then we don't want to filter the first response as it

@@ -62,24 +62,43 @@ let basic_cmd ppf { path; cache_workflow; _ } =
   Format.fprintf ppf "%s" (Cache_workflow.print path cache_workflow)
 
 let untimed_query_generic ~f cmd =
-  let ic = Unix.open_process_in cmd in
-  match f ic with
-  | res -> (
-      match Unix.close_process_in ic with
-      | Unix.WEXITED 0 -> res
-      | Unix.WEXITED code ->
-          Format.eprintf "merlin exited with code %s\n%!" (string_of_int code);
-          exit 1
-      | _ ->
-          Format.eprintf "merlin closed unexpectedly\n%!";
-          exit 2)
-  | exception e ->
-      ignore (Unix.close_process_in ic);
-      let s =
-        Format.sprintf "exception while running [%s]: %s\n%!" cmd
-          (Printexc.to_string e)
+  let err_file = Filename.temp_file "merl_an_" ".err" in
+  Fun.protect
+    ~finally:(fun () -> if Sys.file_exists err_file then Sys.remove err_file)
+    (fun () ->
+      let read_and_remove_err () =
+        let s = In_channel.with_open_text err_file In_channel.input_all in
+        Sys.remove err_file;
+        s
       in
-      failwith s
+      let full_cmd = Format.sprintf "%s 2> %s" cmd (Filename.quote err_file) in
+      let ic = Unix.open_process_in full_cmd in
+      match f ic with
+      | res -> (
+          let status = Unix.close_process_in ic in
+          let std_error = read_and_remove_err () in
+          let error =
+            if String.length std_error > 0 then
+              Some (Format.sprintf "%s while running `%s`%!" std_error cmd)
+            else None
+          in
+          match status with
+          | Unix.WEXITED 0 -> (res, error)
+          | Unix.WEXITED code ->
+              Format.eprintf "merlin exited with code %s\n%!"
+                (string_of_int code);
+              exit 1
+          | _ ->
+              Format.eprintf "merlin closed unexpectedly\n%!";
+              exit 2)
+      | exception e ->
+          ignore (Unix.close_process_in ic);
+          ignore (read_and_remove_err ());
+          let s =
+            Format.sprintf "exception while running [%s]: %s\n%!" cmd
+              (Printexc.to_string e)
+          in
+          failwith s)
 
 let untimed_query_json cmd =
   let f = Yojson.Safe.from_channel in
@@ -93,7 +112,7 @@ let make ?comment path cache_workflow =
   let cmd =
     Printf.sprintf "%s -version" (Cache_workflow.print path cache_workflow)
   in
-  let version = `String (untimed_query_str cmd) in
+  let version = `String (fst (untimed_query_str cmd)) in
   { path; cache_workflow; version; comment }
 
 module Query_type = struct
@@ -381,13 +400,15 @@ module Cmd = struct
   let run ?(verbose = false) ~repeats cmd =
     if verbose then Format.printf "%s\n%!" cmd;
     try
-      let rec loop responses = function
-        | 0 -> responses
+      let rec loop responses errors = function
+        | 0 -> (responses, errors)
         | n ->
-            let new_resp = run_once cmd in
-            loop (new_resp :: responses) (n - 1)
+            let new_resp, new_error = run_once cmd in
+            loop (new_resp :: responses)
+              (match new_error with None -> errors | Some e -> e :: errors)
+              (n - 1)
       in
-      Ok (loop [] repeats)
+      Ok (loop [] [] repeats)
     with exc -> Error (Logs.Error (Printexc.to_string exc))
 end
 
@@ -414,7 +435,7 @@ let check_setup ?(verbose = false) file merlin =
   if verbose then Format.printf "check setup: %s\n%!" cmd;
   match Cmd.run_once cmd with
   | exception exc -> Error (Printexc.to_string exc)
-  | resp -> (
+  | resp, _err -> (
       match Response.get_return_class resp with
       | Ok (Return Empty) -> Ok ()
       | _ -> Error (Response.get_error_message resp))
