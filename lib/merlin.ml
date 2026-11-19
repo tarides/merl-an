@@ -62,39 +62,43 @@ let basic_cmd ppf { path; cache_workflow; _ } =
   Format.fprintf ppf "%s" (Cache_workflow.print path cache_workflow)
 
 let untimed_query_generic ~f cmd =
-  let st_in, st_out, st_err =
-    Unix.open_process_full cmd (Unix.environment ())
-  in
-  let std_error = In_channel.input_all st_err in
-  let get_res f =
-    match f st_in with
-    | res ->
-        let close_channels () =
-          match Unix.close_process_full (st_in, st_out, st_err) with
-          | Unix.WEXITED 0 -> res
+  let err_file = Filename.temp_file "merl_an_" ".err" in
+  Fun.protect
+    ~finally:(fun () -> if Sys.file_exists err_file then Sys.remove err_file)
+    (fun () ->
+      let read_and_remove_err () =
+        let s = In_channel.with_open_text err_file In_channel.input_all in
+        Sys.remove err_file;
+        s
+      in
+      let full_cmd = Format.sprintf "%s 2> %s" cmd (Filename.quote err_file) in
+      let ic = Unix.open_process_in full_cmd in
+      match f ic with
+      | res -> (
+          let status = Unix.close_process_in ic in
+          let std_error = read_and_remove_err () in
+          let error =
+            if String.length std_error > 0 then
+              Some (Format.sprintf "%s while running `%s`%!" std_error cmd)
+            else None
+          in
+          match status with
+          | Unix.WEXITED 0 -> (res, error)
           | Unix.WEXITED code ->
               Format.eprintf "merlin exited with code %s\n%!"
                 (string_of_int code);
               exit 1
           | _ ->
               Format.eprintf "merlin closed unexpectedly\n%!";
-              exit 2
-        in
-        close_channels ()
-    | exception e ->
-        ignore (Unix.close_process_full (st_in, st_out, st_err));
-        let s =
-          Format.sprintf "exception while running [%s]: %s\n%!" cmd
-            (Printexc.to_string e)
-        in
-        failwith s
-  in
-  let error =
-    if String.length std_error > 0 then
-      Some (Format.sprintf "%s while running `%s`%!" std_error cmd)
-    else None
-  in
-  (get_res f, error)
+              exit 2)
+      | exception e ->
+          ignore (Unix.close_process_in ic);
+          ignore (read_and_remove_err ());
+          let s =
+            Format.sprintf "exception while running [%s]: %s\n%!" cmd
+              (Printexc.to_string e)
+          in
+          failwith s)
 
 let untimed_query_json cmd =
   let f = Yojson.Safe.from_channel in
