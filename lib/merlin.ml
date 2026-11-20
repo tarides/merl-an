@@ -280,6 +280,7 @@ module Cmd = struct
   type t = string
 
   let yojson_of_t cmd = `String cmd
+  let to_string cmd = cmd
 
   (* FIXME: instead of having loc optional, it would be nice to have a logic containing: if query_type is local, there's a loc; if it's global, there's none *)
   let make ~query_type ~file ?li ?loc merlin =

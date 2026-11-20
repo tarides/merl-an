@@ -68,6 +68,7 @@ Some of the most common flags you will use with merl-an include:
 - `-q, --queries`: if you would like to run specific query types, you can pass them here comma-separated. The default runs all the query types. Supported query types are: `case-analysis`, `type-enclosing`, `occurrences`, `complete-prefix`, `expand-prefix`, `locate`, and `errors`.
 - `-r, --repeats`: this is how many times to repeat each query per sample to measure variance. The default value is 10.
 - `--cache`: the caching mechanism to simulate, such as `full-cache` or `no-cache`.
+- `--dump-commands`: this flag let's merl-an write all the generated queries to a text file without running them.
 
 **Note**: for all flags checkout the manpage: `merl-an --help`.
 

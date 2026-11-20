@@ -1,7 +1,7 @@
 open! Import
 
 val analyze :
-  backend:(module Backend.Data_channels) ->
+  backend:Data.backend ->
   repeats:int ->
   cache_workflow:Merlin.Cache_workflow.t ->
   merlin_path:string ->
@@ -14,4 +14,5 @@ val analyze :
   extensions:string list ->
   force_yes:bool ->
   verbose:bool ->
+  dump_commands:bool ->
   (unit, Rresult.R.msg) Result.t

@@ -58,3 +58,7 @@ val filter_outliers : [> `Filter_outliers of bool ] Term.t
 
 val verbose : [> `Verbose of bool ] Term.t
 (** Print the commands on stdout before they are run. *)
+
+val dump_commands : [> `Dump_commands of bool ] Term.t
+(** Only dump the generated Merlin commands to a plain text file without running
+    them. *)
