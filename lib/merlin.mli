@@ -108,6 +108,7 @@ module Cmd : sig
       everything *)
 
   val yojson_of_t : t -> Yojson.Safe.t
+  val to_string : t -> string
 
   val make :
     query_type:Query_type.t ->

@@ -15,12 +15,13 @@ let analyze ~backend (`Verbose verbose) (`Filter_outliers filter_outliers)
     (`Cache cache_workflow) (`Repeats repeats) (`Merlin merlin_path)
     (`Proj_dirs proj_dirs) (`Dir_name data_dir) (`File_samples per_file_samples)
     (`Total_samples total_samples) (`Query_types query_types)
-    (`Extensions extensions) (`Force_yes force_yes) =
+    (`Extensions extensions) (`Force_yes force_yes)
+    (`Dump_commands dump_commands) =
   Printexc.record_backtrace true;
   match
     Merl_an.Workflows.analyze ~backend ~repeats ~cache_workflow ~merlin_path
       ~proj_dirs ~data_dir ~per_file_samples ~total_samples ~query_types
-      ~filter_outliers ~extensions ~force_yes ~verbose
+      ~filter_outliers ~extensions ~force_yes ~verbose ~dump_commands
   with
   | Ok () -> ()
   | Error (`Msg err) ->
@@ -38,7 +39,7 @@ let performance_term =
     $ Args.verbose $ Args.filter_outliers $ Args.cache_workflow
     $ Args.repeats_per_sample $ Args.merlin $ Args.proj_dirs $ Args.dir_name
     $ Args.per_file_samples $ Args.total_samples $ Args.query_types
-    $ Args.extensions $ Args.force_yes)
+    $ Args.extensions $ Args.force_yes $ Args.dump_commands)
 
 let performance =
   let info =
@@ -70,7 +71,7 @@ let behavior =
     Term.(
       pre_term $ Args.cache_workflow $ Args.merlin $ Args.proj_dirs
       $ Args.dir_name $ Args.per_file_samples $ Args.total_samples
-      $ Args.query_types $ Args.extensions $ Args.force_yes)
+      $ Args.query_types $ Args.extensions $ Args.force_yes $ Args.dump_commands)
   in
   let info =
     let doc =
@@ -94,7 +95,7 @@ let benchmark =
       $ const (`Cache Merl_an.Merlin.Cache_workflow.Full_cache)
       $ Args.repeats_per_sample $ Args.merlin $ Args.proj_dirs $ Args.dir_name
       $ Args.per_file_samples $ Args.total_samples $ Args.query_types
-      $ Args.extensions $ Args.force_yes)
+      $ Args.extensions $ Args.force_yes $ Args.dump_commands)
   in
   let info =
     let doc = "TODO" in

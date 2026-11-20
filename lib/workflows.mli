@@ -14,4 +14,5 @@ val analyze :
   extensions:string list ->
   force_yes:bool ->
   verbose:bool ->
+  dump_commands:bool ->
   (unit, Rresult.R.msg) Result.t

@@ -2,7 +2,7 @@ open! Import
 
 let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
     ~per_file_samples ~total_samples ~query_types ~filter_outliers ~extensions
-    ~force_yes ~verbose =
+    ~force_yes ~verbose ~dump_commands =
   let merlin_path = Fpath.v merlin_path in
   let merlin = Merlin.make merlin_path cache_workflow in
   let proj_path dir = Fpath.v @@ dir in
@@ -46,8 +46,8 @@ let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
     ~finally:(fun () ->
       if Merlin.is_server merlin then Merlin.stop_server merlin else ())
     (fun () ->
-      Data.with_data ~backend ~force_yes ~merlin ~data_dir ~proj_paths
-        (fun data ->
+      Data.with_data ~dump_commands ~backend ~force_yes ~merlin ~data_dir
+        ~proj_paths (fun data ->
           let* () =
             match files with
             | [] -> Ok ()
@@ -77,8 +77,13 @@ let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
               let () =
                 let d =
                   let* cmd = Merlin.Cmd.make ~query_type ~file merlin in
-                  let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
-                  Ok (cmd, responses)
+                  if dump_commands then (
+                    if verbose then
+                      Format.printf "%s\n%!" (Merlin.Cmd.to_string cmd);
+                    Ok (cmd, []))
+                  else
+                    let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
+                    Ok (cmd, responses)
                 in
                 match d with
                 | Error log -> Data.persist_logs ~log data
@@ -109,8 +114,8 @@ let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
                   id_counter
               | Some (samples, new_id_counter) -> (
                   match
-                    Samples.analyze ~init_cache ~merlin ~repeats ~stream:write
-                      ~filter_outliers ~verbose samples
+                    Samples.analyze ~dump_commands ~init_cache ~merlin ~repeats
+                      ~stream:write ~filter_outliers ~verbose samples
                   with
                   | Ok () -> new_id_counter
                   | Error log ->

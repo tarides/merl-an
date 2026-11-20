@@ -27,6 +27,7 @@ type t
 
 (* TODO: this shouldn't be only exactly merlin and data_dir, but all configuration data. and the data should be stored in Data.t as well*)
 val with_data :
+  dump_commands:bool ->
   backend:backend ->
   force_yes:bool ->
   merlin:Merlin.t ->

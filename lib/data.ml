@@ -16,6 +16,7 @@ type backend = Performance | Behavior of behavior_config | Benchmark
 let performances_file = Fpath.v "performances.json"
 let query_responses_file = Fpath.v "query_responses.json"
 let commands_file = Fpath.v "commands.json"
+let plain_commands_file = Fpath.v "commands.txt"
 let logs_file = Fpath.v "logs.json"
 let merlin_file = Fpath.v "merlin.json"
 let full_responses_file = Fpath.v "full_responses.json"
@@ -476,49 +477,64 @@ let some_file_isnt_writable data_path files =
 type b = Perf of Performance.t | Behav of Behavior.t | Bench of Benchmark.t
 
 (* TODO: should probably also contain `repeats` and all the other means of configuration  *)
-type t = { commands : out_channel; logs : out_channel; backend : b }
+type t = { commands : out_channel; logs : out_channel; backend : b option }
 
 let init_cache t =
   match t.backend with
-  | Perf p -> Merlin.is_server p.merlin
-  | Behav _ -> false
-  | Bench b -> Merlin.is_server b.merlin
+  | None -> false
+  | Some (Perf p) -> Merlin.is_server p.merlin
+  | Some (Behav _) -> false
+  | Some (Bench b) -> Merlin.is_server b.merlin
 
 let write t sample =
-  Command.write t.commands ~id:sample.id ~cmd:sample.cmd;
   match t.backend with
-  | Perf p -> Performance.write_analysis_data p sample
-  | Behav b -> Behavior.write_analysis_data b sample t.logs
-  | Bench b -> Benchmark.write_analysis_data b sample
+  | None ->
+      Printf.fprintf t.commands "%s\n%!"
+        (String.trim (Merlin.Cmd.to_string sample.cmd))
+  | Some backend -> (
+      Command.write t.commands ~id:sample.id ~cmd:sample.cmd;
+      match backend with
+      | Perf p -> Performance.write_analysis_data p sample
+      | Behav b -> Behavior.write_analysis_data b sample t.logs
+      | Bench b -> Benchmark.write_analysis_data b sample)
 
 let persist_logs ~log t = persist_logs ~log t.logs
 
-let all_files = function
+let all_files ~dump_commands = function
+  | _ when dump_commands -> [ plain_commands_file ]
   | Performance -> Performance.all_files
   | Behavior _ -> Behavior.all_files
   | Benchmark -> Benchmark.all_files
 
-let with_channels backend ~data_dir ~merlin ~proj_paths f =
+let with_channels ~dump_commands backend ~data_dir ~merlin ~proj_paths f =
   with_open_channels (fun open_channel ->
-      let commands = open_channel data_dir commands_file in
+      let cmd_file =
+        if dump_commands then plain_commands_file else commands_file
+      in
+      let commands = open_channel data_dir cmd_file in
       let logs = open_channel data_dir logs_file in
       let run backend = f { commands; logs; backend } in
-      match backend with
-      | Performance ->
-          Performance.with_channels ~data_dir ~merlin ~proj_paths (fun p ->
-              run (Perf p))
-      | Behavior config ->
-          Behavior.with_channels config ~data_dir (fun b -> run (Behav b))
-      | Benchmark ->
-          Benchmark.with_channels ~data_dir ~merlin (fun b -> run (Bench b)))
+      if dump_commands then run None
+      else
+        match backend with
+        | Performance ->
+            Performance.with_channels ~data_dir ~merlin ~proj_paths (fun p ->
+                run (Some (Perf p)))
+        | Behavior config ->
+            Behavior.with_channels config ~data_dir (fun b ->
+                run (Some (Behav b)))
+        | Benchmark ->
+            Benchmark.with_channels ~data_dir ~merlin (fun b ->
+                run (Some (Bench b))))
 
 (* TODO: this shouldn't be only exactly data_dir, but all configuration data. and the data should be stored in Data.t as well*)
-let with_data ~backend ~force_yes ~merlin ~data_dir ~proj_paths f =
+let with_data ~dump_commands ~backend ~force_yes ~merlin ~data_dir ~proj_paths f
+    =
   let open Result.Syntax in
   let* () = create_dir_recursively ~force_yes data_dir in
-  let data_files = all_files backend in
+  let data_files = all_files ~dump_commands backend in
   create_files data_dir data_files;
   if some_file_isnt_writable data_dir data_files then (
     Format.eprintf "It's not possible to write to the data files\n%!";
     exit 20)
-  else with_channels backend ~data_dir ~merlin ~proj_paths f
+  else with_channels ~dump_commands backend ~data_dir ~merlin ~proj_paths f
