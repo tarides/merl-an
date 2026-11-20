@@ -139,3 +139,12 @@ let filter_outliers =
 let verbose =
   let doc = "Print the commands on stdout before they are run." in
   named (fun x -> `Verbose x) Arg.(value & flag & info [ "verbose"; "v" ] ~doc)
+
+let dump_commands =
+  let doc =
+    "Only dump the generated Merlin commands to a plain text file without \
+     running them."
+  in
+  named
+    (fun x -> `Dump_commands x)
+    Arg.(value & flag & info [ "dump-commands" ] ~doc)
