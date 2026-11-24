@@ -25,9 +25,10 @@ val analyze :
   filter_outliers:bool ->
   verbose:bool ->
   t ->
+  (log:Logs.t -> unit) ->
   (unit, Logs.t) Result.t
 (** [analyze ~merlin ~repeats data samples] appends new analysis data to [data].
     The data results from running [merlin] on the [samples] (notice that
     [samples] also contains info on the file and on the query type the samples
     are for); it runs the query [repeats] times. The new data is appended to
-    [data] as a side-effect. *)
+    [data] as a side-effect and any errors are written to the logs file. *)
