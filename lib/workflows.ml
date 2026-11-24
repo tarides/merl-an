@@ -71,14 +71,20 @@ let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
                     else Ok ())
           in
           let init_cache = Data.init_cache data in
+          let run_queries = Data.run_queries data in
           let stream_query_data id_counter (file, query_type) =
             let write = Data.write data in
             if Merlin.Query_type.is_global query_type then
               let () =
                 let d =
                   let* cmd = Merlin.Cmd.make ~query_type ~file merlin in
-                  let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
-                  Ok (cmd, responses)
+                  if run_queries then
+                    let+ responses = Merlin.Cmd.run ~verbose ~repeats cmd in
+                    (cmd, responses)
+                  else (
+                    if verbose then
+                      Format.printf "%s\n%!" (Merlin.Cmd.to_string cmd);
+                    Ok (cmd, []))
                 in
                 match d with
                 | Error log -> Data.persist_logs ~log data
@@ -109,8 +115,8 @@ let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
                   id_counter
               | Some (samples, new_id_counter) -> (
                   match
-                    Samples.analyze ~init_cache ~merlin ~repeats ~stream:write
-                      ~filter_outliers ~verbose samples
+                    Samples.analyze ~run_queries ~init_cache ~merlin ~repeats
+                      ~stream:write ~filter_outliers ~verbose samples
                   with
                   | Ok () -> new_id_counter
                   | Error log ->

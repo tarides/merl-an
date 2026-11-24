@@ -102,8 +102,28 @@ let benchmark =
   in
   Cmd.v info regression_term
 
+let commands =
+  let backend = Merl_an.Data.Commands in
+  let commands_term =
+    Term.(
+      const (analyze ~backend)
+      $ Args.verbose
+      $ const (`Filter_outliers false)
+      $ Args.cache_workflow
+      $ const (`Repeats 1)
+      $ Args.merlin $ Args.proj_dirs $ Args.dir_name $ Args.per_file_samples
+      $ Args.total_samples $ Args.query_types $ Args.extensions $ Args.force_yes)
+  in
+  let info =
+    let doc =
+      "Generate commands and dump them to commands.json without running them."
+    in
+    Cmd.info "commands" ~doc ~man
+  in
+  Cmd.v info commands_term
+
 let main =
   Cmd.group ~default:performance_term (Cmd.info "merl-an" ~man)
-    [ performance; behavior; benchmark ]
+    [ performance; behavior; benchmark; commands ]
 
 let () = exit (Cmd.eval main)

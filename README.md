@@ -13,7 +13,7 @@ performance and behavior, executes them and gathers the results.
 
 ### Merl-an modes
 
-Merl-an has 3 main usage modes: for performance analysis, for behavioral analysis, and for benchmarking.
+Merl-an has 4 main usage modes: for performance analysis, for behavioral analysis, for benchmarking, and for generating commands without running them.
 
 #### a. Performance
 
@@ -54,6 +54,16 @@ Used for benchmarking. It runs queries and aggregates the results into a benchma
 
 ```shell
 merl-an benchmark --project src/ --per-file-samples 5 --repeats 5 --data output
+```
+
+#### d. Commands
+
+Used to generate commands and dump them to `commands.json` without executing them.
+
+- Example
+
+```shell
+merl-an commands --project src/ --per-file-samples 5 --data output
 ```
 
 ### Merl-an inputs

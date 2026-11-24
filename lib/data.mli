@@ -20,6 +20,7 @@ type backend =
   | Behavior of behavior_config
       (** tests whether changes to merlin modify its responses. *)
   | Benchmark  (** runs queries and aggregates the results into a benchmark*)
+  | Commands  (** dumps the generated merlin commands without running them. *)
 
 type t
 (** The streaming channels and configuration used to collect and write analysis
@@ -42,6 +43,9 @@ val with_data :
 
 val init_cache : t -> bool
 (** Returns whether the cache should be initialized for this backend. *)
+
+val run_queries : t -> bool
+(** Returns whether Merlin queries should be executed for this backend. *)
 
 val write : t -> sample -> unit
 (** Write analysis data of one sample to the streaming channels. *)

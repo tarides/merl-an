@@ -11,7 +11,12 @@ type sample = {
 }
 
 type behavior_config = { full : bool; distilled_data : bool }
-type backend = Performance | Behavior of behavior_config | Benchmark
+
+type backend =
+  | Performance
+  | Behavior of behavior_config
+  | Benchmark
+  | Commands
 
 let performances_file = Fpath.v "performances.json"
 let query_responses_file = Fpath.v "query_responses.json"
@@ -448,7 +453,11 @@ let some_file_isnt_writable data_path files =
           false)
     files
 
-type b = Perf of Performance.t | Behav of Behavior.t | Bench of Benchmark.t
+type b =
+  | Perf of Performance.t
+  | Behav of Behavior.t
+  | Bench of Benchmark.t
+  | Cmds
 
 (* TODO: should probably also contain `repeats` and all the other means of configuration  *)
 type t = { commands : out_channel; logs : out_channel; backend : b }
@@ -456,8 +465,11 @@ type t = { commands : out_channel; logs : out_channel; backend : b }
 let init_cache t =
   match t.backend with
   | Perf p -> Merlin.is_server p.merlin
-  | Behav _ -> false
+  | Behav _ | Cmds -> false
   | Bench b -> Merlin.is_server b.merlin
+
+let run_queries t =
+  match t.backend with Perf _ | Behav _ | Bench _ -> true | Cmds -> false
 
 let write t sample =
   Command.write t.commands ~id:sample.id ~cmd:sample.cmd;
@@ -465,6 +477,7 @@ let write t sample =
   | Perf p -> Performance.write_analysis_data p sample
   | Behav b -> Behavior.write_analysis_data b sample t.logs
   | Bench b -> Benchmark.write_analysis_data b sample
+  | Cmds -> ()
 
 let persist_logs ~log t = persist_logs ~log t.logs
 
@@ -472,6 +485,7 @@ let all_files = function
   | Performance -> Performance.all_files
   | Behavior _ -> Behavior.all_files
   | Benchmark -> Benchmark.all_files
+  | Commands -> [ commands_file; logs_file ]
 
 let with_channels backend ~data_dir ~merlin ~proj_paths f =
   with_open_channels (fun open_channel ->
@@ -485,7 +499,8 @@ let with_channels backend ~data_dir ~merlin ~proj_paths f =
       | Behavior config ->
           Behavior.with_channels config ~data_dir (fun b -> run (Behav b))
       | Benchmark ->
-          Benchmark.with_channels ~data_dir ~merlin (fun b -> run (Bench b)))
+          Benchmark.with_channels ~data_dir ~merlin (fun b -> run (Bench b))
+      | Commands -> run Cmds)
 
 (* TODO: this shouldn't be only exactly data_dir, but all configuration data. and the data should be stored in Data.t as well*)
 let with_data ~backend ~force_yes ~merlin ~data_dir ~proj_paths f =
