@@ -21,6 +21,7 @@ type backend =
 let performances_file = Fpath.v "performances.json"
 let query_responses_file = Fpath.v "query_responses.json"
 let commands_file = Fpath.v "commands.json"
+let cmd_file = Fpath.v "commands.txt"
 let logs_file = Fpath.v "logs.json"
 let merlin_file = Fpath.v "merlin.json"
 let full_responses_file = Fpath.v "full_responses.json"
@@ -102,6 +103,10 @@ module Command = struct
     Format.fprintf ppf "%s%!" (Yojson.Safe.to_string (yojson_of_t data))
 
   let write oc ~id ~cmd = write_json_line oc pp { sample_id = id; cmd }
+
+  let write_cmd oc (cmd : Merlin.Cmd.t) =
+    let ppf = Format.formatter_of_out_channel oc in
+    Format.fprintf ppf "%s\n%!" (Merlin.Cmd.to_string cmd)
 end
 
 let extract_timings responses =
@@ -472,7 +477,7 @@ let run_queries t =
   match t.backend with Perf _ | Behav _ | Bench _ -> true | Cmds -> false
 
 let write t sample =
-  Command.write t.commands ~id:sample.id ~cmd:sample.cmd;
+  match t.backend with Cmds -> Command.write_cmd t.commands sample.cmd | _ -> Command.write t.commands ~id:sample.id ~cmd:sample.cmd;
   match t.backend with
   | Perf p -> Performance.write_analysis_data p sample
   | Behav b -> Behavior.write_analysis_data b sample t.logs
@@ -485,11 +490,11 @@ let all_files = function
   | Performance -> Performance.all_files
   | Behavior _ -> Behavior.all_files
   | Benchmark -> Benchmark.all_files
-  | Commands -> [ commands_file; logs_file ]
+  | Commands -> [ cmd_file; logs_file ]
 
 let with_channels backend ~data_dir ~merlin ~proj_paths f =
   with_open_channels (fun open_channel ->
-      let commands = open_channel data_dir commands_file in
+      let commands = match backend with Commands -> open_channel data_dir cmd_file | _ -> open_channel data_dir commands_file in
       let logs = open_channel data_dir logs_file in
       let run backend = f { commands; logs; backend } in
       match backend with
