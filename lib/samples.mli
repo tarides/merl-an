@@ -18,6 +18,7 @@ val generate :
     sample set together with an updated [id_counter]. *)
 
 val analyze :
+  run_queries:bool ->
   init_cache:bool ->
   merlin:Merlin.t ->
   repeats:int ->

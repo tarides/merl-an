@@ -1,12 +1,16 @@
 open! Import
 
-let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
-    ~cache_workflow ~merlin_path ~proj_dirs ~data_dir ~per_file_samples
-    ~total_samples ~query_types ~filter_outliers ~extensions ~force_yes ~verbose
-    =
+let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
+    ~per_file_samples ~total_samples ~query_types ~filter_outliers ~extensions
+    ~force_yes ~verbose =
   let merlin_path = Fpath.v merlin_path in
   let merlin = Merlin.make merlin_path cache_workflow in
-  let proj_path dir = Fpath.v @@ dir in
+  let proj_path dir =
+    let path = Fpath.v dir in
+    match backend with
+    | Data.Commands -> Fpath.(normalize (v (Sys.getcwd ()) // path))
+    | Performance | Behavior _ | Benchmark -> path
+  in
   let open Result.Syntax in
   let* data_dir =
     match data_dir with
@@ -43,12 +47,12 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
         let make_sample ~id:_ file = file in
         Reservoir.get_samples ~make_sample ~id_counter:1 reservoir
   in
-  let module D = Data.Make (Backend) in
   Fun.protect
     ~finally:(fun () ->
       if Merlin.is_server merlin then Merlin.stop_server merlin else ())
     (fun () ->
-      D.with_data ~force_yes ~merlin ~data_dir ~proj_paths (fun data ->
+      Data.with_data ~backend ~force_yes ~merlin ~data_dir ~proj_paths
+        (fun data ->
           let* () =
             match files with
             | [] -> Ok ()
@@ -61,7 +65,7 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
                         File.pp sample_file err
                     in
                     Format.eprintf "[WARNING] %s\n%!" warning_msg;
-                    D.persist_logs ~log:(Logs.Warning warning_msg) data;
+                    Data.persist_logs ~log:(Logs.Warning warning_msg) data;
                     if (not force_yes) && Unix.(isatty stdin) then
                       let question =
                         "Do you want to proceed with running merl-an anyway?"
@@ -71,18 +75,24 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
                       else Ok ()
                     else Ok ())
           in
-          let init_cache = D.init_cache data in
+          let init_cache = Data.init_cache data in
+          let run_queries = Data.run_queries data in
           let stream_query_data id_counter (file, query_type) =
-            let write = D.write data in
+            let write = Data.write data in
             if Merlin.Query_type.is_global query_type then
               let () =
                 let d =
                   let* cmd = Merlin.Cmd.make ~query_type ~file merlin in
-                  let* responses = Merlin.Cmd.run ~verbose ~repeats cmd in
-                  Ok (cmd, responses)
+                  if run_queries then
+                    let+ responses = Merlin.Cmd.run ~verbose ~repeats cmd in
+                    (cmd, responses)
+                  else (
+                    if verbose then
+                      Format.printf "%s\n%!" (Merlin.Cmd.to_string cmd);
+                    Ok (cmd, []))
                 in
                 match d with
-                | Error log -> D.persist_logs ~log data
+                | Error log -> Data.persist_logs ~log data
                 | Ok (cmd, responses) ->
                     write
                       {
@@ -106,16 +116,16 @@ let analyze ~backend:(module Backend : Backend.Data_channels) ~repeats
                          "File %s couldn't be parsed and was ignored.\n"
                          (Yojson.Safe.to_string @@ File.yojson_of_t file))
                   in
-                  D.persist_logs ~log data;
+                  Data.persist_logs ~log data;
                   id_counter
               | Some (samples, new_id_counter) -> (
                   match
-                    Samples.analyze ~init_cache ~merlin ~repeats ~stream:write
-                      ~filter_outliers ~verbose samples
+                    Samples.analyze ~run_queries ~init_cache ~merlin ~repeats
+                      ~stream:write ~filter_outliers ~verbose samples
                   with
                   | Ok () -> new_id_counter
                   | Error log ->
-                      D.persist_logs ~log data;
+                      Data.persist_logs ~log data;
                       new_id_counter)
           in
           let _last_sample_id =

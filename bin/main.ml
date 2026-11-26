@@ -32,9 +32,7 @@ let analyze ~backend (`Verbose verbose) (`Filter_outliers filter_outliers)
       exit 100
 
 let performance_term =
-  let backend =
-    (module Merl_an.Backend.Performance : Merl_an.Backend.Data_channels)
-  in
+  let backend = Merl_an.Data.Performance in
   Term.(
     const (analyze ~backend)
     $ Args.verbose $ Args.filter_outliers $ Args.cache_workflow
@@ -57,11 +55,11 @@ let behavior =
       (`Verbose verbose) (`Cache cache) =
     let config =
       {
-        Merl_an.Backend.full = not no_full;
+        Merl_an.Data.full = not no_full;
         distilled_data = not no_distilled_data;
       }
     in
-    let backend = Merl_an.Backend.behavior config in
+    let backend = Merl_an.Data.Behavior config in
     analyze ~backend (`Verbose verbose) (`Filter_outliers false) (`Cache cache)
       (`Repeats 1)
   in
@@ -88,9 +86,7 @@ let behavior =
   Cmd.v info behavior_term
 
 let benchmark =
-  let backend =
-    (module Merl_an.Backend.Benchmark : Merl_an.Backend.Data_channels)
-  in
+  let backend = Merl_an.Data.Benchmark in
   let regression_term =
     Term.(
       const (analyze ~backend)
@@ -106,8 +102,28 @@ let benchmark =
   in
   Cmd.v info regression_term
 
+let commands =
+  let backend = Merl_an.Data.Commands in
+  let commands_term =
+    Term.(
+      const (analyze ~backend)
+      $ Args.verbose
+      $ const (`Filter_outliers false)
+      $ Args.cache_workflow
+      $ const (`Repeats 1)
+      $ Args.merlin $ Args.proj_dirs $ Args.dir_name $ Args.per_file_samples
+      $ Args.total_samples $ Args.query_types $ Args.extensions $ Args.force_yes)
+  in
+  let info =
+    let doc =
+      "Generate commands and dump them to commands.json without running them."
+    in
+    Cmd.info "commands" ~doc ~man
+  in
+  Cmd.v info commands_term
+
 let main =
   Cmd.group ~default:performance_term (Cmd.info "merl-an" ~man)
-    [ performance; behavior; benchmark ]
+    [ performance; behavior; benchmark; commands ]
 
 let () = exit (Cmd.eval main)
