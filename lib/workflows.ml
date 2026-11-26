@@ -5,7 +5,12 @@ let analyze ~backend ~repeats ~cache_workflow ~merlin_path ~proj_dirs ~data_dir
     ~force_yes ~verbose =
   let merlin_path = Fpath.v merlin_path in
   let merlin = Merlin.make merlin_path cache_workflow in
-  let proj_path dir = Fpath.v @@ dir in
+  let proj_path dir =
+    let path = Fpath.v dir in
+    match backend with
+    | Data.Commands -> Fpath.(normalize (v (Sys.getcwd ()) // path))
+    | Performance | Behavior _ | Benchmark -> path
+  in
   let open Result.Syntax in
   let* data_dir =
     match data_dir with
